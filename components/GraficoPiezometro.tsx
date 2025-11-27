@@ -99,8 +99,25 @@ export default function GraficoPiezometro() {
                     { label: "Precipitação", data: dados.map((i: any) => i.precipitacao), borderColor: '#2f4860', tension: 0.4, yAxisID: 'y1' },
                     { label: "Vazão Bombeamento", data: dados.map((i: any) => i.vazao_bombeamento), borderColor: '#00bb7e', tension: 0.4, yAxisID: 'y1' },
                     { label: "Nível Estático", data: dados.map((i: any) => i.nivel_estatico), borderColor: '#ff6384', tension: 0.4, yAxisID: 'y' },
-                    { label: "Cota Superfície", data: dados.map((i: any) => i.cota_superficie), borderColor: '#ff9f40', tension: 0.4, yAxisID: 'y' },
-                    { label: "Cota Base", data: dados.map((i: any) => i.cota_base), borderColor: '#9966ff', tension: 0.4, yAxisID: 'y' }
+
+                    {
+                        label: "Cota Superfície",
+                        data: dados.map((i: any) => i.cota_superficie),
+                        borderColor: '#ff9f40',
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        borderDash: [5, 5], 
+                        pointRadius: 0
+                    },
+                    {
+                        label: "Cota Base",
+                        data: dados.map((i: any) => i.cota_base),
+                        borderColor: '#9966ff',
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        borderDash: [5, 5],
+                        pointRadius: 0
+                    }
                 ]
             });
 
@@ -178,7 +195,6 @@ export default function GraficoPiezometro() {
                 />
             </div>
 
-            {/* 🔽 GRÁFICO */}
             {lineData ? (
                 <Chart type="line" data={lineData} options={lineOptions} />
             ) : (
