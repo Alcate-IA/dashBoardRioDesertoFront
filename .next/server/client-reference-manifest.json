@@ -48,17 +48,25 @@
         "async": false
       }
     },
-    "(app-client)/./layout/layout.tsx": {
+    "(app-client)/./app/(main)/page.tsx": {
       "*": {
-        "id": "(sc_client)/./layout/layout.tsx",
+        "id": "(sc_client)/./app/(main)/page.tsx",
         "name": "*",
         "chunks": [],
         "async": false
       }
     },
-    "(app-client)/./app/(main)/page.tsx": {
+    "(app-client)/./node_modules/primeicons/primeicons.css": {
       "*": {
-        "id": "(sc_client)/./app/(main)/page.tsx",
+        "id": "(sc_client)/./node_modules/primeicons/primeicons.css",
+        "name": "*",
+        "chunks": [],
+        "async": false
+      }
+    },
+    "(app-client)/./layout/layout.tsx": {
+      "*": {
+        "id": "(sc_client)/./layout/layout.tsx",
         "name": "*",
         "chunks": [],
         "async": false
@@ -155,19 +163,43 @@
       ],
       "async": false
     },
-    "/home/matheus/Documentos/dashBoardRioDeserto/layout/layout.tsx": {
-      "id": "(app-client)/./layout/layout.tsx",
+    "/home/matheus/Documentos/dashBoardRioDeserto/app/(main)/page.tsx": {
+      "id": "(app-client)/./app/(main)/page.tsx",
+      "name": "*",
+      "chunks": [
+        "app/(main)/page:static/chunks/app/(main)/page.js"
+      ],
+      "async": false
+    },
+    "/home/matheus/Documentos/dashBoardRioDeserto/node_modules/primereact/resources/themes/lara-light-blue/theme.css": {
+      "id": "(app-client)/./node_modules/primereact/resources/themes/lara-light-blue/theme.css",
       "name": "*",
       "chunks": [
         "app/(main)/layout:static/chunks/app/(main)/layout.js"
       ],
       "async": false
     },
-    "/home/matheus/Documentos/dashBoardRioDeserto/app/(main)/page.tsx": {
-      "id": "(app-client)/./app/(main)/page.tsx",
+    "/home/matheus/Documentos/dashBoardRioDeserto/node_modules/primereact/resources/primereact.min.css": {
+      "id": "(app-client)/./node_modules/primereact/resources/primereact.min.css",
       "name": "*",
       "chunks": [
-        "app/(main)/page:static/chunks/app/(main)/page.js"
+        "app/(main)/layout:static/chunks/app/(main)/layout.js"
+      ],
+      "async": false
+    },
+    "/home/matheus/Documentos/dashBoardRioDeserto/node_modules/primeicons/primeicons.css": {
+      "id": "(app-client)/./node_modules/primeicons/primeicons.css",
+      "name": "*",
+      "chunks": [
+        "app/(main)/layout:static/chunks/app/(main)/layout.js"
+      ],
+      "async": false
+    },
+    "/home/matheus/Documentos/dashBoardRioDeserto/layout/layout.tsx": {
+      "id": "(app-client)/./layout/layout.tsx",
+      "name": "*",
+      "chunks": [
+        "app/(main)/layout:static/chunks/app/(main)/layout.js"
       ],
       "async": false
     }
@@ -176,7 +208,9 @@
     "/home/matheus/Documentos/dashBoardRioDeserto/app/layout": [
       "static/css/app/layout.css"
     ],
-    "/home/matheus/Documentos/dashBoardRioDeserto/app/(main)/layout": [],
-    "/home/matheus/Documentos/dashBoardRioDeserto/app/(main)/page": []
+    "/home/matheus/Documentos/dashBoardRioDeserto/app/(main)/page": [],
+    "/home/matheus/Documentos/dashBoardRioDeserto/app/(main)/layout": [
+      "static/css/app/(main)/layout.css"
+    ]
   }
 }

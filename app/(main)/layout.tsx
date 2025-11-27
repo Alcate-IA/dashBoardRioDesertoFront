@@ -1,6 +1,11 @@
 import { Metadata } from 'next';
 import Layout from '../../layout/layout';
 
+import 'primereact/resources/themes/lara-light-blue/theme.css';
+import 'primereact/resources/primereact.min.css';
+import 'primeicons/primeicons.css';
+
+
 interface AppLayoutProps {
     children: React.ReactNode;
 }
