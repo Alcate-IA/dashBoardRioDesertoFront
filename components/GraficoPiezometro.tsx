@@ -18,6 +18,7 @@ export default function GraficoPiezometro() {
     const [idSelecionado, setIdSelecionado] = useState<number | null>(null);
 
     const [tiposSelecionados, setTiposSelecionados] = useState([]);
+    const [carregando, setCarregando] = useState(false);
 
     const [dataInicio, setDataInicio] = useState<Date | null>(null);
     const [dataFim, setDataFim] = useState<Date | null>(null);
@@ -33,25 +34,42 @@ export default function GraficoPiezometro() {
         { label: "PC - Calhas", value: "PC" }
     ];
 
-    useEffect(() => {
-        async function carregarPiezometros() {
-            try {
-                const resposta = await getPiezometrosAtivos();
-                setPiezometros(
-                    resposta.data.map((p: any) => ({
-                        label: `${p.idPiezometro} - ${p.nomePiezometro}`,
-                        value: p.cdPiezometro
-                    }))
-                );
-            } catch (e) {
-                console.error("Erro ao carregar piezômetros", e);
+    const carregarPiezometrosFiltrados = async (tiposFiltro = []) => {
+        setCarregando(true);
+        try {
+            const resposta = await getPiezometrosAtivos(tiposFiltro);
+            const piezometrosFormatados = resposta.data.map((p: any) => ({
+                label: `${p.idPiezometro} - ${p.nomePiezometro} (${p.tipoPiezometro})`,
+                value: p.cdPiezometro,
+                tipo: p.tipoPiezometro
+            }));
+            
+            setPiezometros(piezometrosFormatados);
+            
+            if (idSelecionado && !piezometrosFormatados.find((p: any) => p.value === idSelecionado)) {
+                setIdSelecionado(null);
             }
+        } catch (e) {
+            console.error("Erro ao carregar piezômetros", e);
+            Swal.fire({
+                icon: "error",
+                title: "Erro",
+                text: "Não foi possível carregar os piezômetros"
+            });
+        } finally {
+            setCarregando(false);
         }
-        carregarPiezometros();
+    };
+
+    useEffect(() => {
+        carregarPiezometrosFiltrados();
     }, []);
 
-    async function buscarGrafico() {
+    useEffect(() => {
+        carregarPiezometrosFiltrados(tiposSelecionados);
+    }, [tiposSelecionados]);
 
+    async function buscarGrafico() {
         if (!idSelecionado) {
             Swal.fire({ icon: "warning", title: "Selecione um piezômetro" });
             return;
@@ -151,23 +169,25 @@ export default function GraficoPiezometro() {
                     value={tiposSelecionados}
                     options={tiposPiezometros}
                     onChange={(e) => setTiposSelecionados(e.value)}
-                    placeholder="Tipos"
+                    placeholder="Filtrar por tipo"
                     display="chip"
                     style={{ width: "300px" }}
                     filter
                     filterPlaceholder="Buscar tipo..."
+                    maxSelectedLabels={3}
                 />
 
                 <Dropdown
                     value={idSelecionado}
                     options={piezometros}
                     onChange={(e) => setIdSelecionado(e.value)}
-                    placeholder="Selecione um piezômetro"
+                    placeholder={carregando ? "Carregando..." : "Selecione um piezômetro"}
                     style={{ width: "300px" }}
                     filter
                     filterPlaceholder="Buscar..."
                     filterBy="label"
                     showClear
+                    disabled={carregando}
                 />
 
                 <Calendar
@@ -192,6 +212,7 @@ export default function GraficoPiezometro() {
                     onClick={buscarGrafico}
                     severity="info"
                     rounded
+                    disabled={carregando}
                 />
             </div>
 
