@@ -1,4 +1,4 @@
-// File: /home/matheus/Documentos/dashBoardRioDeserto/app/(main)/page.tsx
+// File: /home/kaua/projects/frontEndRioDesertoDashBoard/app/(main)/page.tsx
 import * as entry from '../../../../app/(main)/page.js'
 import type { ResolvingMetadata } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

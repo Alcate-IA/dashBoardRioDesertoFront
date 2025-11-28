@@ -21,8 +21,10 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
     return (
         <div className="layout-topbar">
             <Link href="/" className="layout-topbar-logo">
-                <img src={`/layout/images/logo-${layoutConfig.colorScheme !== 'light' ? 'white' : 'dark'}.svg`} width="47.22px" height={'35px'} alt="logo" />
-                <span>SAKAI</span>
+                <div style={{ backgroundColor: '#FFC107', padding: '5px', borderRadius: '4px', marginRight: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ color: '#000', fontWeight: 'bold', fontSize: '1.2rem' }}>RD</span>
+                </div>
+                <span>Rio Deserto</span>
             </Link>
 
             <button ref={menubuttonRef} type="button" className="p-link layout-menu-button layout-topbar-button" onClick={onMenuToggle}>

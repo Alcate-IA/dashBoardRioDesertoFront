@@ -6,6 +6,8 @@ import { Dropdown } from "primereact/dropdown";
 import { Chart } from "primereact/chart";
 import { Button } from "primereact/button";
 import { MultiSelect } from "primereact/multiselect";
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
 
 import Swal from "sweetalert2";
 
@@ -25,6 +27,13 @@ export default function GraficoPiezometro() {
 
     const [lineData, setLineData] = useState<any>(null);
     const [lineOptions, setLineOptions] = useState<any>({});
+    const [summary, setSummary] = useState({
+        nivelEstatico: 0,
+        precipitacao: 0,
+        vazao: 0,
+        total: 0
+    });
+    const [tabelaDados, setTabelaDados] = useState<any[]>([]);
 
     const tiposPiezometros = [
         { label: "PB - Piezômetro de Bacia", value: "PB" },
@@ -43,9 +52,9 @@ export default function GraficoPiezometro() {
                 value: p.cdPiezometro,
                 tipo: p.tipoPiezometro
             }));
-            
+
             setPiezometros(piezometrosFormatados);
-            
+
             if (idSelecionado && !piezometrosFormatados.find((p: any) => p.value === idSelecionado)) {
                 setIdSelecionado(null);
             }
@@ -124,7 +133,7 @@ export default function GraficoPiezometro() {
                         borderColor: '#ff9f40',
                         tension: 0.4,
                         yAxisID: 'y',
-                        borderDash: [5, 5], 
+                        borderDash: [5, 5],
                         pointRadius: 0
                     },
                     {
@@ -139,14 +148,61 @@ export default function GraficoPiezometro() {
                 ]
             });
 
+            // Calculate Summary
+            const total = dados.length;
+            const avgNivel = total > 0 ? dados.reduce((acc: number, curr: any) => acc + (curr.nivel_estatico || 0), 0) / total : 0;
+            const avgPrecip = total > 0 ? dados.reduce((acc: number, curr: any) => acc + (curr.precipitacao || 0), 0) / total : 0;
+            const avgVazao = total > 0 ? dados.reduce((acc: number, curr: any) => acc + (curr.vazao_bombeamento || 0), 0) / total : 0;
+
+            setSummary({
+                nivelEstatico: parseFloat(avgNivel.toFixed(1)),
+                precipitacao: parseFloat(avgPrecip.toFixed(1)),
+                vazao: parseFloat(avgVazao.toFixed(1)),
+                total: total
+            });
+            setTabelaDados(dados);
+
             setLineOptions({
+                maintainAspectRatio: false,
+                aspectRatio: 0.6,
                 plugins: {
-                    legend: { labels: { color: '#000' } }
+                    legend: {
+                        labels: {
+                            color: '#ccc'
+                        }
+                    }
                 },
                 scales: {
-                    x: { ticks: { color: '#000' } },
-                    y: { type: "linear", position: "left", ticks: { color: "#000" } },
-                    y1: { type: "linear", position: "right", ticks: { color: "#000" }, grid: { drawOnChartArea: false } }
+                    x: {
+                        ticks: {
+                            color: '#ccc'
+                        },
+                        grid: {
+                            color: '#444'
+                        }
+                    },
+                    y: {
+                        type: "linear",
+                        display: true,
+                        position: "left",
+                        ticks: {
+                            color: "#ccc"
+                        },
+                        grid: {
+                            color: '#444'
+                        }
+                    },
+                    y1: {
+                        type: "linear",
+                        display: true,
+                        position: "right",
+                        ticks: {
+                            color: "#ccc"
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
                 }
             });
 
@@ -161,65 +217,107 @@ export default function GraficoPiezometro() {
     }
 
     return (
-        <div className="card">
-            <h5>Relatório Piezômetro</h5>
+        <div className="col-12">
+            <div className="card filter-bar">
+                <div className="filter-item">
+                    <span className="filter-label">Piezômetro</span>
+                    <Dropdown
+                        value={idSelecionado}
+                        options={piezometros}
+                        onChange={(e) => setIdSelecionado(e.value)}
+                        placeholder={carregando ? "Carregando..." : "Selecione..."}
+                        className="w-full md:w-14rem"
+                        filter
+                        showClear
+                        disabled={carregando}
+                    />
+                </div>
 
-            <div style={{ marginBottom: "20px", display: "flex", gap: "10px", alignItems: "center" }}>
-                <MultiSelect
-                    value={tiposSelecionados}
-                    options={tiposPiezometros}
-                    onChange={(e) => setTiposSelecionados(e.value)}
-                    placeholder="Filtrar por tipo"
-                    display="chip"
-                    style={{ width: "300px" }}
-                    filter
-                    filterPlaceholder="Buscar tipo..."
-                    maxSelectedLabels={3}
-                />
+                <div className="filter-item">
+                    <span className="filter-label">Período</span>
+                    <div className="flex gap-2">
+                        <Calendar value={dataInicio} onChange={(e) => setDataInicio(e.value)} dateFormat="mm/yy" view="month" placeholder="Início" showIcon />
+                        <Calendar value={dataFim} onChange={(e) => setDataFim(e.value)} dateFormat="mm/yy" view="month" placeholder="Fim" showIcon />
+                    </div>
+                </div>
 
-                <Dropdown
-                    value={idSelecionado}
-                    options={piezometros}
-                    onChange={(e) => setIdSelecionado(e.value)}
-                    placeholder={carregando ? "Carregando..." : "Selecione um piezômetro"}
-                    style={{ width: "300px" }}
-                    filter
-                    filterPlaceholder="Buscar..."
-                    filterBy="label"
-                    showClear
-                    disabled={carregando}
-                />
+                <div className="filter-item">
+                    <span className="filter-label">Visualização</span>
+                    <MultiSelect
+                        value={tiposSelecionados}
+                        options={tiposPiezometros}
+                        onChange={(e) => setTiposSelecionados(e.value)}
+                        placeholder="Tipos"
+                        display="chip"
+                        className="w-full md:w-15rem"
+                    />
+                </div>
 
-                <Calendar
-                    value={dataInicio}
-                    onChange={(e) => setDataInicio(e.value)}
-                    dateFormat="mm/yy"
-                    view="month"
-                    placeholder="Início"
-                />
-
-                <Calendar
-                    value={dataFim}
-                    onChange={(e) => setDataFim(e.value)}
-                    dateFormat="mm/yy"
-                    view="month"
-                    placeholder="Fim"
-                />
-
-                <Button
-                    label="Buscar"
-                    icon="pi pi-search"
-                    onClick={buscarGrafico}
-                    severity="info"
-                    rounded
-                    disabled={carregando}
-                />
+                <div className="ml-auto">
+                    <Button label="APLICAR" onClick={buscarGrafico} className="p-button-warning font-bold" disabled={carregando} />
+                </div>
             </div>
 
-            {lineData ? (
-                <Chart type="line" data={lineData} options={lineOptions} />
-            ) : (
-                <p>Nenhum gráfico carregado ainda.</p>
+            <div className="grid mb-4">
+                <div className="col-12 md:col-6 lg:col-3">
+                    <div className="summary-card">
+                        <div className="summary-title">NÍVEL ESTÁTICO MÉDIO <i className="pi pi-chart-line text-yellow-500" /></div>
+                        <div className="summary-value">{summary.nivelEstatico}<span className="summary-unit">m</span></div>
+                    </div>
+                </div>
+                <div className="col-12 md:col-6 lg:col-3">
+                    <div className="summary-card">
+                        <div className="summary-title">PRECIPITAÇÃO MÉDIA <i className="pi pi-cloud text-blue-500" /></div>
+                        <div className="summary-value">{summary.precipitacao}<span className="summary-unit">mm</span></div>
+                    </div>
+                </div>
+                <div className="col-12 md:col-6 lg:col-3">
+                    <div className="summary-card">
+                        <div className="summary-title">VAZÃO MÉDIA <i className="pi pi-sliders-h text-orange-500" /></div>
+                        <div className="summary-value">{summary.vazao}<span className="summary-unit">m³/h</span></div>
+                    </div>
+                </div>
+                <div className="col-12 md:col-6 lg:col-3">
+                    <div className="summary-card">
+                        <div className="summary-title">TOTAL DE MEDIÇÕES <i className="pi pi-file text-green-500" /></div>
+                        <div className="summary-value">{summary.total}<span className="summary-unit">reg</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="chart-container">
+                <div className="chart-header">
+                    <div className="chart-title">Níveis Piezométricos e Dados Ambientais</div>
+                    <div className="chart-legend">
+                        <div className="legend-item"><div className="legend-color" style={{ backgroundColor: '#ff6384' }}></div>Nível Estático</div>
+                        <div className="legend-item"><div className="legend-color" style={{ backgroundColor: '#ff9f40' }}></div>Nível Superficial</div>
+                        <div className="legend-item"><div className="legend-color" style={{ backgroundColor: '#9966ff' }}></div>Nível Base</div>
+                    </div>
+                </div>
+                {lineData ? (
+                    <Chart type="line" data={lineData} options={lineOptions} height="400px" />
+                ) : (
+                    <div className="flex align-items-center justify-content-center" style={{ height: '400px', color: '#666' }}>
+                        Selecione os filtros e clique em Aplicar para visualizar os dados
+                    </div>
+                )}
+            </div>
+
+            {tabelaDados.length > 0 && (
+                <div className="card">
+                    <h5 className="mb-4 text-white">Painel de Dados Detalhados</h5>
+                    <DataTable value={tabelaDados} paginator rows={5} className="p-datatable-sm" emptyMessage="Nenhum dado encontrado">
+                        <Column field="mes_ano" header="DATA" body={(rowData) => {
+                            const [ano, mes] = rowData.mes_ano.split("-");
+                            return `${mes}/${ano}`;
+                        }} sortable></Column>
+                        <Column field="nivel_estatico" header="N. ESTÁTICO (M)" body={(d) => <span className="val-green">{d.nivel_estatico}</span>} sortable></Column>
+                        <Column field="cota_superficie" header="N. SUPERFICIAL (M)" body={(d) => <span className="val-orange">{d.cota_superficie}</span>} sortable></Column>
+                        <Column field="cota_base" header="N. BASE (M)" body={(d) => <span className="val-purple">{d.cota_base}</span>} sortable></Column>
+                        <Column field="precipitacao" header="PRECIP. (MM)" sortable></Column>
+                        <Column field="vazao_bombeamento" header="VAZÃO (M³/H)" body={(d) => <span className="val-blue">{d.vazao_bombeamento}</span>} sortable></Column>
+                    </DataTable>
+                </div>
             )}
         </div>
     );
