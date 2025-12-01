@@ -220,6 +220,18 @@ export default function GraficoPiezometro() {
         <div className="col-12">
             <div className="card filter-bar">
                 <div className="filter-item">
+                    <span className="filter-label">Visualização</span>
+                    <MultiSelect
+                        value={tiposSelecionados}
+                        options={tiposPiezometros}
+                        onChange={(e) => setTiposSelecionados(e.value)}
+                        placeholder="Tipos"
+                        display="chip"
+                        className="w-full md:w-15rem"
+                    />
+                </div>
+
+                <div className="filter-item">
                     <span className="filter-label">Piezômetro</span>
                     <Dropdown
                         value={idSelecionado}
@@ -241,23 +253,12 @@ export default function GraficoPiezometro() {
                     </div>
                 </div>
 
-                <div className="filter-item">
-                    <span className="filter-label">Visualização</span>
-                    <MultiSelect
-                        value={tiposSelecionados}
-                        options={tiposPiezometros}
-                        onChange={(e) => setTiposSelecionados(e.value)}
-                        placeholder="Tipos"
-                        display="chip"
-                        className="w-full md:w-15rem"
-                    />
-                </div>
-
                 <div className="ml-auto">
                     <Button label="APLICAR" onClick={buscarGrafico} className="p-button-warning font-bold" disabled={carregando} />
                 </div>
             </div>
 
+            {/* CARDS */}
             <div className="grid mb-4">
                 <div className="col-12 md:col-6 lg:col-3">
                     <div className="summary-card">
@@ -285,6 +286,7 @@ export default function GraficoPiezometro() {
                 </div>
             </div>
 
+            {/*GŔAFICO*/}
             <div className="chart-container">
                 <div className="chart-header">
                     <div className="chart-title">Níveis Piezométricos e Dados Ambientais</div>

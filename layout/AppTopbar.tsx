@@ -19,38 +19,10 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
     }));
 
     return (
-        <div className="layout-topbar">
-            <Link href="/" className="layout-topbar-logo">
-                <div style={{ backgroundColor: '#FFC107', padding: '5px', borderRadius: '4px', marginRight: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ color: '#000', fontWeight: 'bold', fontSize: '1.2rem' }}>RD</span>
-                </div>
-                <span>Rio Deserto</span>
+        <div className="layout-topbar" style={{ justifyContent: 'flex-start' }}>
+            <Link href="/" className="layout-topbar-logo" style={{ width: 'auto' }}>
+                <img src="/layout/images/logo-rio-deserto.png" alt="Rio Deserto Logo" height="90" />
             </Link>
-
-            <button ref={menubuttonRef} type="button" className="p-link layout-menu-button layout-topbar-button" onClick={onMenuToggle}>
-                <i className="pi pi-bars" />
-            </button>
-
-            <button ref={topbarmenubuttonRef} type="button" className="p-link layout-topbar-menu-button layout-topbar-button" onClick={showProfileSidebar}>
-                <i className="pi pi-ellipsis-v" />
-            </button>
-
-            <div ref={topbarmenuRef} className={classNames('layout-topbar-menu', { 'layout-topbar-menu-mobile-active': layoutState.profileSidebarVisible })}>
-                <button type="button" className="p-link layout-topbar-button">
-                    <i className="pi pi-calendar"></i>
-                    <span>Calendar</span>
-                </button>
-                <button type="button" className="p-link layout-topbar-button">
-                    <i className="pi pi-user"></i>
-                    <span>Profile</span>
-                </button>
-                <Link href="/documentation">
-                    <button type="button" className="p-link layout-topbar-button">
-                        <i className="pi pi-cog"></i>
-                        <span>Settings</span>
-                    </button>
-                </Link>
-            </div>
         </div>
     );
 });
