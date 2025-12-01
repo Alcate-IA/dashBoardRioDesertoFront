@@ -20,8 +20,8 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
 
     return (
         <div className="layout-topbar" style={{ justifyContent: 'flex-start' }}>
-            <Link href="/" className="layout-topbar-logo" style={{ width: 'auto' }}>
-                <img src="/layout/images/logo-rio-deserto.png" alt="Rio Deserto Logo" height="90" />
+            <Link href="/" className="layout-topbar-logo" style={{ width: 'auto', display: 'flex', alignItems: 'center' }}>
+                <img src="/layout/images/logo-rio-deserto.png" alt="Rio Deserto Logo" width="210" height="60" style={{ objectFit: 'contain' }} />
             </Link>
         </div>
     );

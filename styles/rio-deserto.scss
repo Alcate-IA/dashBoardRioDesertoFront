@@ -40,6 +40,8 @@ body {
     border-radius: 8px;
     margin-bottom: 1.5rem;
     border: 1px solid #333;
+    flex-wrap: wrap;
+    /* Allow wrapping */
 }
 
 .filter-item {
@@ -55,14 +57,53 @@ body {
     font-weight: 600;
 }
 
+/* Responsive Filter Bar */
+@media (max-width: 630px) {
+    .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-item {
+        width: 100%;
+    }
+
+    .filter-item .p-multiselect,
+    .filter-item .p-dropdown,
+    .filter-item .p-calendar {
+        width: 100% !important;
+    }
+
+    .filter-item .flex.gap-2 {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .filter-item .p-calendar {
+        width: 100%;
+    }
+
+    .ml-auto {
+        margin-left: 0 !important;
+        width: 100%;
+    }
+
+    .p-button {
+        width: 100%;
+    }
+}
+
 /* PrimeReact Overrides for Dark Mode */
-.p-dropdown, .p-multiselect, .p-calendar .p-inputtext {
+.p-dropdown,
+.p-multiselect,
+.p-calendar .p-inputtext {
     background-color: #333 !important;
     border-color: #444 !important;
     color: #fff !important;
 }
 
-.p-dropdown:not(.p-disabled).p-focus, 
+.p-dropdown:not(.p-disabled).p-focus,
 .p-multiselect:not(.p-disabled).p-focus,
 .p-inputtext:enabled:focus {
     border-color: var(--rio-deserto-primary) !important;
@@ -79,6 +120,7 @@ body {
 .p-button.p-button-info:hover {
     background-color: #ffca2c !important;
     border-color: #ffca2c !important;
+    color: #000 !important;
 }
 
 /* Summary Cards */
@@ -129,6 +171,20 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
+    flex-wrap: wrap;
+    /* Allow wrapping for chart header */
+    gap: 1rem;
+}
+
+@media (max-width: 630px) {
+    .chart-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .chart-legend {
+        flex-wrap: wrap;
+    }
 }
 
 .chart-title {
@@ -157,7 +213,7 @@ body {
 }
 
 /* Data Table Overrides */
-.p-datatable .p-datatable-thead > tr > th {
+.p-datatable .p-datatable-thead>tr>th {
     background-color: #202020 !important;
     color: #aaa !important;
     border-color: #333 !important;
@@ -165,21 +221,32 @@ body {
     text-transform: uppercase;
 }
 
-.p-datatable .p-datatable-tbody > tr {
+.p-datatable .p-datatable-tbody>tr {
     background-color: #2a2a2a !important;
     color: #fff !important;
     border-color: #333 !important;
 }
 
-.p-datatable .p-datatable-tbody > tr > td {
+.p-datatable .p-datatable-tbody>tr>td {
     border-color: #333 !important;
 }
 
-.p-datatable .p-datatable-tbody > tr:hover {
+.p-datatable .p-datatable-tbody>tr:hover {
     background-color: #333 !important;
 }
 
-.val-green { color: #00bb7e; }
-.val-orange { color: #ff9f40; }
-.val-purple { color: #9966ff; }
-.val-blue { color: #36A2EB; }
+.val-green {
+    color: #00bb7e;
+}
+
+.val-orange {
+    color: #ff9f40;
+}
+
+.val-purple {
+    color: #9966ff;
+}
+
+.val-blue {
+    color: #36A2EB;
+}

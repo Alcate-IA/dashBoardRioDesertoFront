@@ -36,7 +36,6 @@ export default function GraficoPiezometro() {
     const [tabelaDados, setTabelaDados] = useState<any[]>([]);
 
     const tiposPiezometros = [
-        { label: "PB - Piezômetro de Bacia", value: "PB" },
         { label: "PP - Piezômetro de Profundidade", value: "PP" },
         { label: "PR - Régua", value: "PR" },
         { label: "PV - Ponto de Vazão", value: "PV" },
@@ -47,7 +46,11 @@ export default function GraficoPiezometro() {
         setCarregando(true);
         try {
             const resposta = await getPiezometrosAtivos(tiposFiltro);
-            const piezometrosFormatados = resposta.data.map((p: any) => ({
+            
+            // Filtrar piezômetros: excluir os do tipo "PB"
+            const piezometrosFiltrados = resposta.data.filter((p: any) => p.tipoPiezometro !== "PB");
+            
+            const piezometrosFormatados = piezometrosFiltrados.map((p: any) => ({
                 label: `${p.idPiezometro} - ${p.nomePiezometro} (${p.tipoPiezometro})`,
                 value: p.cdPiezometro,
                 tipo: p.tipoPiezometro
