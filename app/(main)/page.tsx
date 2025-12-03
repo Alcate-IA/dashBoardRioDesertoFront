@@ -11,7 +11,7 @@ import { LayoutContext } from '../../layout/context/layoutcontext';
 import Link from 'next/link';
 import { Demo } from '@/types';
 import { ChartData, ChartOptions } from 'chart.js';
-import GraficoPiezometro from "@/components/GraficoPiezometro";
+import GraficoPiezometro from "@/components/GraficoPiezometro/index";
 
 
 const lineData: ChartData = {

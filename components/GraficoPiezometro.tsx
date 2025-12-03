@@ -1,3 +1,6 @@
+//componente antigo, com todo o código do gráfico piezômetro em um único arquivo, vou deixar aqui para referência e possível reutilização futura em alguma situação critica
+
+
 'use client';
 
 import { useEffect, useState } from "react";
