@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Swal from "sweetalert2";
-import { getPiezometrosAtivos, getPiezometroPorIdDataInicioDataFimApi } from "@/service/api";
+import { getPiezometrosAtivos, getPiezometroPorIdDataInicioDataFimApi, getColetaPorIdDataInicioDataFimApi } from "@/service/api";
 import { formatarData } from "@/utils/formatarData";
 
 interface PiezometroOption {
@@ -175,6 +175,14 @@ export const usePiezometroData = () => {
                 inicioFormatado,
                 fimFormatado
             );
+
+            const respostaColeta = await getColetaPorIdDataInicioDataFimApi(
+                idSelecionado,
+                inicioFormatado,
+                fimFormatado
+            );
+
+            console.log('Resposta Coleta:', respostaColeta.data);
 
             let dados = [...resposta.data].sort((a: any, b: any) => {
                 return new Date(a.mes_ano).getTime() - new Date(b.mes_ano).getTime();

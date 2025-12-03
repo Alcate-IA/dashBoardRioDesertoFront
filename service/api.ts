@@ -21,3 +21,12 @@ export const getPiezometroPorIdDataInicioDataFimApi = (id: number, inicio: strin
         }
     });
 };
+
+export const getColetaPorIdDataInicioDataFimApi = (id: number, inicio: string, fim: string) => {
+    return rota.get(`/relatorios/coleta/${id}/filtro`, {
+        params: {
+            mesAnoInicio: inicio,
+            mesAnoFim: fim
+        }
+    });
+};
