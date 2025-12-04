@@ -223,38 +223,32 @@ export default function AnaliseQuimica(
   const { informacoesAmostra, totalParametrosMapeados, totalOutrosDados, analises, outrosDados } = data;
 
   return (
-    <div className="p-3">
+    <div className="p-3 analise-quimica">
       {/* Informações da Amostra */}
       <div className="mb-4">
         <h6 className="font-bold mb-2 text-white">Informações da Amostra</h6>
-        <div className="grid">
-          <div className="col-6">
+        <div className="grid informacoes-amostra">
+          <div className="col-12 md:col-6">
             <span className="text-500">Data: </span>
             <span className="font-medium">{informacoesAmostra?.data}</span>
           </div>
-          <div className="col-6">
-            <span className="text-500">Identificação: </span>
-            <span className="font-medium">
-              {informacoesAmostra?.identificacao}
-            </span>
-          </div>
-          <div className="col-6">
+          <div className="col-12 md:col-6">
             <span className="text-500">Coletor: </span>
             <span className="font-medium">
               {informacoesAmostra?.coletor || "Não informado"}
             </span>
           </div>
-          <div className="col-6">
+          <div className="col-12 md:col-6">
             <span className="text-500">Parâmetros Mapeados: </span>
             <span className="font-medium">{totalParametrosMapeados}</span>
           </div>
-          <div className="col-6">
+          <div className="col-12 md:col-6">
             <span className="text-500">Outros Dados: </span>
             <span className="font-medium">{totalOutrosDados}</span>
           </div>
           <div className="col-12">
             <span className="text-500">Nome: </span>
-            <span className="font-medium">
+            <span className="font-medium nome-identificacao">
               {informacoesAmostra?.nomeIdentificacao}
             </span>
           </div>
@@ -277,7 +271,7 @@ export default function AnaliseQuimica(
             return (
               <div key={chave} className="col-12 md:col-6 lg:col-3 mb-2">
                 <div
-                  className={`border-1 p-3 border-round ${obterCorCard(
+                  className={`border-1 p-3 border-round analise-card ${obterCorCard(
                     status
                   )}`}
                 >
@@ -329,7 +323,7 @@ export default function AnaliseQuimica(
                     )}
                   </div>
 
-                  <div className="text-xs text-500 mt-2">{mensagem}</div>
+                  <div className="text-xs text-500 mt-2 mensagem-parametro">{mensagem}</div>
                 </div>
               </div>
             );
@@ -353,11 +347,11 @@ export default function AnaliseQuimica(
               <div className="grid">
                 {Object.entries(outrosDados || {}).map(([simbolo, resultado]) => (
                   <div key={simbolo} className="col-12 md:col-6 lg:col-3 mb-2">
-                    <div className="bg-gray-900 border-1 border-gray-700 p-2 border-round">
-                      <div className="text-gray-400 text-xs font-medium mb-1">
+                    <div className="bg-gray-900 border-1 border-gray-700 p-2 border-round outra-analise-card">
+                      <div className="text-gray-400 text-xs font-medium mb-1 simbolo-analise">
                         {simbolo}
                       </div>
-                      <div className="text-white text-sm">
+                      <div className="text-white text-sm resultado-analise">
                         {resultado as string}
                       </div>
                     </div>

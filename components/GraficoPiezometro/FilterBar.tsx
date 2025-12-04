@@ -68,6 +68,8 @@ export default function FilterBar(
           filter
           showClear
           disabled={carregando}
+          panelClassName="dropdown-panel-mobile"
+          appendTo="self"
         />
       </div>
 
@@ -81,6 +83,8 @@ export default function FilterBar(
             view="month"
             placeholder="Início"
             showIcon
+            panelClassName="calendar-panel-fixed"
+            appendTo="self"
           />
           <Calendar
             value={dataFim}
@@ -89,6 +93,8 @@ export default function FilterBar(
             view="month"
             placeholder="Fim"
             showIcon
+            panelClassName="calendar-panel-fixed"
+            appendTo="self"
           />
         </div>
       </div>
