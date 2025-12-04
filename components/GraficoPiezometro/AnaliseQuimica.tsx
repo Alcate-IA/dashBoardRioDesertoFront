@@ -73,6 +73,13 @@ export default function AnaliseQuimica(
       chaveBackend: "coliformesTotais",
       tipo: "ausente",
     },
+    escherichiaColi: {
+      nome: "Análise Microbiológica (E. coli)",
+      limite: "Ausente",
+      unidade: "",
+      chaveBackend: "escherichiaColi",
+      tipo: "ausente",
+    },
     turbidez: {
       nome: "Turbidez",
       limite: "5,0 NTU (máx)",
