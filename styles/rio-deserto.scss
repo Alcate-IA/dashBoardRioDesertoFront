@@ -726,3 +726,39 @@ body {
         flex-basis: 100%;
     }
 }
+
+/* Coleta Table Responsive */
+.coleta-table-responsive {
+    @media (max-width: 768px) {
+        .p-datatable-thead > tr > th {
+            font-size: 0.7rem !important;
+            padding: 0.5rem 0.25rem !important;
+        }
+        
+        .p-datatable-tbody > tr > td {
+            font-size: 0.75rem !important;
+            padding: 0.5rem 0.25rem !important;
+        }
+        
+        .p-row-toggler {
+            width: 1.5rem !important;
+            height: 1.5rem !important;
+        }
+        
+        .p-row-toggler .p-row-toggler-icon {
+            font-size: 0.7rem !important;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .p-datatable-thead > tr > th {
+            font-size: 0.65rem !important;
+            padding: 0.4rem 0.2rem !important;
+        }
+        
+        .p-datatable-tbody > tr > td {
+            font-size: 0.7rem !important;
+            padding: 0.4rem 0.2rem !important;
+        }
+    }
+}

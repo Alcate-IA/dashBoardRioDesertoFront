@@ -52,7 +52,7 @@ export default function ColetaTable(
         onRowExpand={onRowExpand}
         rowExpansionTemplate={rowExpansionTemplate}
         dataKey="n_registro"
-        className="p-datatable-sm"
+        className="p-datatable-sm coleta-table-responsive"
         emptyMessage="Nenhum registro de coleta encontrado"
         paginator
         rows={10}
@@ -65,7 +65,13 @@ export default function ColetaTable(
           body={(rowData) => formatarData(rowData.data)}
           sortable
         />
-        <Column field="identificacao" header="IDENTIFICAÇÃO" sortable />
+        <Column 
+          field="identificacao" 
+          header="IDENTIFICAÇÃO" 
+          sortable 
+          className="hidden md:table-cell"
+          headerClassName="hidden md:table-cell"
+        />
       </DataTable>
     </div>
   );
