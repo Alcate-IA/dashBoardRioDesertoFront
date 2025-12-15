@@ -5,7 +5,19 @@ import FilterBar from "./FilterBar";
 import GraficosAnalise from "./GraficosAnalise";
 import { getPiezometrosRelatorio, getColetaCompletaPorIdDataInicioDataFimApi } from '@/service/api';
 
-export default function QualidadeAgua() {
+export type QualidadeAguaProps = { //PARA O SCRP
+    initialCdPiezometro?: number; 
+    initialMesAnoInicio?: string; 
+    initialMesAnoFim?: string;    
+    autoApply?: boolean;
+};
+
+export default function QualidadeAgua({
+    initialCdPiezometro,
+    initialMesAnoInicio,
+    initialMesAnoFim,
+    autoApply = false, //SCRAP OFF
+}: QualidadeAguaProps = {}) {
     const [tipoFiltroSelecionado, setTipoFiltroSelecionado] = useState<string | null>(null);
     const [pontoSelecionado, setPontoSelecionado] = useState<number | null>(null);
     const [dataInicio, setDataInicio] = useState<Date | null>(null);
@@ -14,6 +26,7 @@ export default function QualidadeAgua() {
     const [pontos, setPontos] = useState<any[]>([]);
 
     const [dadosColeta, setDadosColeta] = useState<any>(null);
+    const [autoApplied, setAutoApplied] = useState(false);
 
     // Opções estáticas para visualização
     const opcoesFiltro = [
@@ -44,6 +57,30 @@ export default function QualidadeAgua() {
 
         buscarPiezometros();
     }, []);
+
+    const parseMesAno = (mesAno?: string | null): Date | null => {
+        if (!mesAno) return null;
+        const m = mesAno.match(/^(0[1-9]|1[0-2])\/(19|20)\d{2}$/);
+        if (!m) return null;
+        const [mm, yyyy] = mesAno.split('/');
+        return new Date(parseInt(yyyy, 10), parseInt(mm, 10) - 1, 1);
+    };
+
+    useEffect(() => {
+        if (initialCdPiezometro) setPontoSelecionado(initialCdPiezometro);
+        const di = parseMesAno(initialMesAnoInicio);
+        const df = parseMesAno(initialMesAnoFim);
+        if (di) setDataInicio(di);
+        if (df) setDataFim(df);
+    }, [initialCdPiezometro, initialMesAnoInicio, initialMesAnoFim]);
+
+    useEffect(() => {
+        if (!autoApply || autoApplied) return;
+        if (pontoSelecionado && dataInicio && dataFim) {
+            handleBuscar();
+            setAutoApplied(true);
+        }
+    }, [autoApply, autoApplied, pontoSelecionado, dataInicio, dataFim]);
 
     const handleBuscar = async () => {
         if (!pontoSelecionado || !dataInicio || !dataFim) {
