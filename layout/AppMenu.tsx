@@ -59,7 +59,6 @@ const AppMenu = () => {
       dismissable: true,
       showCloseIcon: true,
       blockScroll: true,
-      position: "left",
       style: { width: "85%" },
     }
     : {
@@ -67,7 +66,6 @@ const AppMenu = () => {
       dismissable: false,
       showCloseIcon: false,
       blockScroll: false,
-      position: "left",
       style: { width: "16rem" },
     };
 
