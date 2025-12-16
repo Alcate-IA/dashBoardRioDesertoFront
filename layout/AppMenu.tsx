@@ -90,7 +90,7 @@ const AppMenu = () => {
       )}
 
       <Sidebar
-        visible={undefined}
+        visible={visible}
         onHide={() => setVisible(false)}
         className={classNames("app-sidebar", { "mobile-sidebar": isMobile })}
         {...sidebarProps}
