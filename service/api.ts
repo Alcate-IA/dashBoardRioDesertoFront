@@ -2,6 +2,7 @@ import axios from "axios";
 
 export const rota = axios.create({
     baseURL: "http://192.168.100.95:8080",
+    //baseURL: "http://localhost:8080",
     timeout: 10000,
 });
 
@@ -17,8 +18,12 @@ export const getPiezometrosAtivos = (tipos: any = null) => {
 
 
 // Busca piezometros para o relatório de coleta (QualidadeAgua)
-export const getPiezometrosRelatorio = () => {
-    return rota.get("/relatorios/piezometros-ativos");
+export const getPiezometrosRelatorio = (tipos: string | string[] | null = null) => {
+    const params: any = {};
+    if (tipos) {
+        params.tipos = Array.isArray(tipos) ? tipos.join(',') : tipos;
+    }
+    return rota.get("/relatorios/piezometros-ativos", { params });
 };
 
 // Dados de nível estático (GraficoPiezometro)

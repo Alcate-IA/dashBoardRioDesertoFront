@@ -37,11 +37,12 @@ export default function QualidadeAgua({
         { label: "PC - Calhas", value: "PC" },
     ];
 
-    // Buscar dados dos piezômetros
+
     useEffect(() => {
         const buscarPiezometros = async () => {
+            setCarregando(true);
             try {
-                const response = await getPiezometrosRelatorio();
+                const response = await getPiezometrosRelatorio(tipoFiltroSelecionado);
                 const data = response.data;
 
                 const pontosFormatados = data.map((item: any) => ({
@@ -50,13 +51,18 @@ export default function QualidadeAgua({
                 }));
 
                 setPontos(pontosFormatados);
+                setPontoSelecionado(null); 
+
             } catch (error) {
                 console.error("Erro ao buscar piezômetros:", error);
+                setPontos([]);
+            } finally {
+                setCarregando(false);
             }
         };
 
         buscarPiezometros();
-    }, []);
+    }, [tipoFiltroSelecionado]);
 
     const parseMesAno = (mesAno?: string | null): Date | null => {
         if (!mesAno) return null;
