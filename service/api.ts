@@ -71,3 +71,15 @@ export const webHookIAAnaliseNivelEstatico = async (dto: any, cdPiezometro: numb
         console.error("Erro ao enviar dados para o webhook:", error);
     }
 };
+
+export const webHookIAAnaliseQualidade = async (dto: any, cdPiezometro: number | string | null) => {
+    const payload = {
+        cdPiezometro: cdPiezometro,
+        dto: dto
+    };
+    try {
+        await axios.post("aqui vai ser o lnik do cara novooooo", payload);
+    } catch (error) {
+        console.error("Erro ao enviar dados para o webhook:", error);
+    }
+};

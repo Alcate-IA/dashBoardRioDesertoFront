@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import FilterBar from "./FilterBar";
 import GraficosAnalise from "./GraficosAnalise";
-import { getPiezometrosRelatorio, getColetaCompletaPorIdDataInicioDataFimApi } from '@/service/api';
+import { getPiezometrosRelatorio, getColetaCompletaPorIdDataInicioDataFimApi, webHookIAAnaliseQualidade } from '@/service/api';
 
 export type QualidadeAguaProps = { //PARA O SCRP
     initialCdPiezometro?: number; 
@@ -109,6 +109,10 @@ export default function QualidadeAgua({
             const response = await getColetaCompletaPorIdDataInicioDataFimApi(pontoSelecionado, inicio, fim);
             const data = response.data;
             setDadosColeta(data);
+            
+            if (data) {
+                webHookIAAnaliseQualidade(data, pontoSelecionado);
+            }
         } catch (error) {
             console.error("Erro ao buscar dados:", error);
         } finally {
