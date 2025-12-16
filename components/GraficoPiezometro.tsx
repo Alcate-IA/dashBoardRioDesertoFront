@@ -19,7 +19,7 @@ import {
 import { formatarData } from "@/utils/formatarData";
 
 interface GraficoPiezometroProps {
-  initialCdPiezometro?: string;
+  initialCdPiezometro?: number;
   initialMesAnoInicio?: string;
   initialMesAnoFim?: string;
   autoApply?: boolean;

@@ -7,7 +7,7 @@ import GraficoPiezometro from '@/components/GraficoPiezometro';
 
 export default function Page() {
   const searchParams = useSearchParams();
-  const cdPiezometro = searchParams.get('cdPiezometro');
+  const cdPiezometro = Number(searchParams.get('cdPiezometro'));
   const mesAnoInicio = searchParams.get('mesAnoInicio');
   const mesAnoFim = searchParams.get('mesAnoFim');
 
