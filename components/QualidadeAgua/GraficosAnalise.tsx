@@ -82,10 +82,6 @@ export default function GraficosAnalise({ dados }: PropriedadesGrafico) {
             }
         }
 
-        // Se for só um número solto (ex: "30,0"), assumimos que pode ser um teto? 
-        // Ou ignoramos se não tiver prefixo? No contexto fornecido, a maioria tem prefixo.
-        // Vou assumir que se não casou com nada acima, retorna vazio para evitar erros.
-
         return {};
     };
 
@@ -117,16 +113,15 @@ export default function GraficosAnalise({ dados }: PropriedadesGrafico) {
         });
         const datas = amostrasOrdenadas.map((a: any) => formatarData(a.informacoesAmostra.data));
 
-        // 3. Identificar todos os símbolos únicos presentes nas amostras (agrupados pelo normalizado)
-        // Map: NormalizedSymbol -> OriginalSymbol (o primeiro encontrado, para usar no label se não houver leg)
-        const simbolosAmostrasMap = new Map<string, string>();
+        // 3. Identificar todos os símbolos e nomes de análise únicos presentes nas amostras
+        const simbolosAmostrasMap = new Map<string, { simbolo: string, nome_analise: string }>();
 
         amostrasOrdenadas.forEach((amostra: any) => {
             if (amostra.analises) {
                 amostra.analises.forEach((analise: any) => {
                     const norm = normalizeSymbol(analise.simbolo);
                     if (!simbolosAmostrasMap.has(norm)) {
-                        simbolosAmostrasMap.set(norm, analise.simbolo);
+                        simbolosAmostrasMap.set(norm, { simbolo: analise.simbolo, nome_analise: analise.nome_analise });
                     }
                 });
             }
@@ -136,8 +131,7 @@ export default function GraficosAnalise({ dados }: PropriedadesGrafico) {
         const listaFaltantes: AnaliseLegislacao[] = [];
 
         // 4. Cruzar dados
-        // Iterar sobre os símbolos encontrados nas amostras
-        simbolosAmostrasMap.forEach((originalSymbol, normalizedSymbol) => {
+        simbolosAmostrasMap.forEach((amostraInfo, normalizedSymbol) => {
             const legParam = paramsLegislacao.get(normalizedSymbol);
 
             // Dados da amostra (buscando pelo símbolo normalizado)
@@ -151,7 +145,7 @@ export default function GraficosAnalise({ dados }: PropriedadesGrafico) {
 
             const datasets = [
                 {
-                    label: legParam ? legParam.simbolo : originalSymbol, // Prefere o símbolo da legislação se houver
+                    label: legParam ? legParam.simbolo : amostraInfo.simbolo, // Prefere o símbolo da legislação se houver
                     data: dataValues,
                     fill: false,
                     borderColor: '#FFC107',
@@ -161,9 +155,6 @@ export default function GraficosAnalise({ dados }: PropriedadesGrafico) {
                 }
             ];
 
-            // Adicionar linhas de limite se existirem
-            // Como Chart.js Annotation pode não estar instalado, usamos datasets constantes
-            // Precisamos de um array do mesmo tamanho de 'datas'
             if (limits.max !== undefined) {
                 datasets.push({
                     label: `Máximo (${legParam?.nome_analise || 'Legislação'})`, // Hack para legenda
@@ -193,7 +184,7 @@ export default function GraficosAnalise({ dados }: PropriedadesGrafico) {
             }
 
             // Título do gráfico
-            const titulo = legParam ? legParam.nome_analise : originalSymbol;
+            const titulo = legParam ? legParam.nome_analise : amostraInfo.nome_analise;
             const subtitle = legParam ? `Parâmetro: ${legParam.parametro}` : 'Sem limite na legislação';
 
             listaGraficos.push({
