@@ -9,7 +9,7 @@ import {
     getPiezometroPorIdDataInicioDataFimApi, 
     getColetaPorIdDataInicioDataFimApi, 
     getAnaliseQuimicaPorRegistro,
-    sendDataToWebhook
+    webHookIAAnaliseNivelEstatico
 } from "@/service/api";
 import { formatarData } from "@/utils/formatarData";
 
@@ -192,7 +192,7 @@ export const usePiezometroData = () => {
             );
 
             if (resposta.data && resposta.data.length > 0) {
-                sendDataToWebhook(resposta.data, idSelecionado);
+                webHookIAAnaliseNivelEstatico(resposta.data, idSelecionado);
             }
 
             const respostaColeta = await getColetaPorIdDataInicioDataFimApi(

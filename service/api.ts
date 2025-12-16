@@ -60,7 +60,7 @@ export const getAnaliseQuimicaPorRegistro = (nRegistro: number) => {
     return rota.get(`/relatorios/coleta/analises-quimicas/${nRegistro}`);
 };
 
-export const sendDataToWebhook = async (dto: any, cdPiezometro: number | string | null) => {
+export const webHookIAAnaliseNivelEstatico = async (dto: any, cdPiezometro: number | string | null) => {
     const payload = {
         cdPiezometro: cdPiezometro,
         dto: dto
