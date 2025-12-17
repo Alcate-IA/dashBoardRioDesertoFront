@@ -66,9 +66,11 @@ export const webHookIAAnaliseNivelEstatico = async (dto: any, cdPiezometro: numb
         dto: dto
     };
     try {
-        await axios.post("https://n8n.alcateia-ia.com/webhook/envio-analise-db", payload);
+        const response = await axios.post("https://n8n.alcateia-ia.com/webhook/envio-analise-db", payload);
+        return response.data;
     } catch (error) {
         console.error("Erro ao enviar dados para o webhook:", error);
+        return null;
     }
 };
 

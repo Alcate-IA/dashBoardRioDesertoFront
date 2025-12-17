@@ -6,6 +6,7 @@ import { Chart } from "primereact/chart";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import ColetaTable from "./ColetaTable";
+import AnaliseIA from "./AnaliseIA";
 
 import { usePiezometroData } from "@/hooks/usePiezometroData";
 import FilterBar from "./FilterBar";
@@ -34,6 +35,10 @@ export default function GraficoPiezometro() {
     analisesQuimicas,
     carregandoAnalise,
     buscarAnaliseQuimica,
+
+    // relacionados a analise ia nivel estatico
+    analiseIANivelEstatico,
+    carregandoIANivelEstatico,
   } = usePiezometroData();
 
   // Funções auxiliares (mantidas do código original)
@@ -235,7 +240,11 @@ export default function GraficoPiezometro() {
         )}
       </div>
 
+      {/* ANÁLISE DA IA */}
+      <AnaliseIA analise={analiseIANivelEstatico} carregando={carregandoIANivelEstatico} />
+
       {/* LISTA DOS DADOS DA TABELA */}
+      
       {tabelaDados.length > 0 && filters.tipoSelecionado && (
         <div className="card">
           <h5 className="mb-4 text-white">
