@@ -4,10 +4,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Swal from "sweetalert2";
-import { 
-    getPiezometrosAtivos, 
-    getPiezometroPorIdDataInicioDataFimApi, 
-    getColetaPorIdDataInicioDataFimApi, 
+import {
+    getPiezometrosAtivos,
+    getPiezometroPorIdDataInicioDataFimApi,
+    getColetaPorIdDataInicioDataFimApi,
     getAnaliseQuimicaPorRegistro,
     webHookIAAnaliseNivelEstatico
 } from "@/service/api";
@@ -89,8 +89,8 @@ export const usePiezometroData = () => {
 
     //da tabela de coletas
     const [tabelaDados, setTabelaDados] = useState<TabelaDado[]>([]);
-    const [coletaDados, setColetaDados] = useState<any[]>([]); 
-    const [expandedRows, setExpandedRows] = useState<any>(null); 
+    const [coletaDados, setColetaDados] = useState<any[]>([]);
+    const [expandedRows, setExpandedRows] = useState<any>(null);
 
     //das analises dentro de coletas
     const [analisesQuimicas, setAnalisesQuimicas] = useState<Record<number, any>>({});
@@ -120,9 +120,9 @@ export const usePiezometroData = () => {
         try {
             const filtroArray = tipoFiltro ? [tipoFiltro] : [];
             const resposta = await getPiezometrosAtivos(filtroArray);
-            
+
             const piezometrosFiltrados = resposta.data.filter((p: any) => p.tipoPiezometro !== "PB");
-            
+
             const piezometrosFormatados = piezometrosFiltrados.map((p: any) => ({
                 label: `${p.idPiezometro} - ${p.nomePiezometro} (${p.tipoPiezometro})`,
                 value: p.cdPiezometro,
@@ -188,9 +188,18 @@ export const usePiezometroData = () => {
         const fimFormatado = formatarData(dataFim);
 
         try {
+            Swal.fire({
+                title: 'Carregando...',
+                html: 'Buscando dados e analisando...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             setCarregando(true);
             setCarregandoIANivelEstatico(true);
-            setAnaliseIANivelEstatico(null); 
+            setAnaliseIANivelEstatico(null);
 
             const resposta = await getPiezometroPorIdDataInicioDataFimApi(
                 idSelecionado,
@@ -200,7 +209,7 @@ export const usePiezometroData = () => {
 
             if (resposta.data && resposta.data.length > 0) {
                 const iaResponse = await webHookIAAnaliseNivelEstatico(resposta.data, idSelecionado);
-                setAnaliseIANivelEstatico(iaResponse?.output);
+                setAnaliseIANivelEstatico(iaResponse[0].output);
             }
 
             const respostaColeta = await getColetaPorIdDataInicioDataFimApi(
@@ -250,88 +259,88 @@ export const usePiezometroData = () => {
                         pointRadius: 0,
                         order: 2
                     },
-                    { 
-                        label: "Vazão Mina", 
-                        data: dados.map((i: any) => i.vazao_bombeamento), 
-                        borderColor: '#00bb7e', 
-                        borderWidth: 1, 
-                        tension: 0.4, 
+                    {
+                        label: "Vazão Mina",
+                        data: dados.map((i: any) => i.vazao_bombeamento),
+                        borderColor: '#00bb7e',
+                        borderWidth: 1,
+                        tension: 0.4,
                         yAxisID: 'y1',
-                    },                     
-                    { 
-                        label: "Nível Estático", 
-                        data: dados.map((i: any) => i.nivel_estatico), 
-                        borderColor: '#ff6384', 
+                    },
+                    {
+                        label: "Nível Estático",
+                        data: dados.map((i: any) => i.nivel_estatico),
+                        borderColor: '#ff6384',
                         borderWidth: 3,
-                        tension: 0.4, 
+                        tension: 0.4,
                         yAxisID: 'y',
                         order: 4
                     },
-                    { 
-                        label: "Precipitação", 
-                        data: dados.map((i: any) => i.precipitacao), 
-                        borderColor: '#2f4860', 
-                        tension: 0.4, 
-                        yAxisID: 'y1' 
+                    {
+                        label: "Precipitação",
+                        data: dados.map((i: any) => i.precipitacao),
+                        borderColor: '#2f4860',
+                        tension: 0.4,
+                        yAxisID: 'y1'
                     }
                 ];
             } else if (tipoPiezometro === 'PR') {
                 datasets = [
-                    { 
-                        label: "Vazão Mina", 
-                        data: dados.map((i: any) => i.vazao_bombeamento), 
-                        borderColor: '#00bb7e', 
-                        tension: 0.4, 
-                        yAxisID: 'y1' 
+                    {
+                        label: "Vazão Mina",
+                        data: dados.map((i: any) => i.vazao_bombeamento),
+                        borderColor: '#00bb7e',
+                        tension: 0.4,
+                        yAxisID: 'y1'
                     },
-                    { 
-                        label: "Cota", 
-                        data: dados.map((i: any) => i.cota_superficie), 
-                        borderColor: '#ff9f40', 
+                    {
+                        label: "Cota",
+                        data: dados.map((i: any) => i.cota_superficie),
+                        borderColor: '#ff9f40',
                         borderDash: [5, 5],
                         pointRadius: 0,
-                        tension: 0.4, 
-                        yAxisID: 'y' 
+                        tension: 0.4,
+                        yAxisID: 'y'
                     },
-                    { 
-                        label: "Nível Estático", 
-                        data: dados.map((i: any) => i.nivel_estatico), 
-                        borderColor: '#ff6384', 
-                        tension: 0.4, 
-                        yAxisID: 'y' 
+                    {
+                        label: "Nível Estático",
+                        data: dados.map((i: any) => i.nivel_estatico),
+                        borderColor: '#ff6384',
+                        tension: 0.4,
+                        yAxisID: 'y'
                     },
-                    { 
-                        label: "Precipitação", 
-                        data: dados.map((i: any) => i.precipitacao), 
-                        borderColor: '#2f4860', 
-                        tension: 0.4, 
-                        yAxisID: 'y1' 
+                    {
+                        label: "Precipitação",
+                        data: dados.map((i: any) => i.precipitacao),
+                        borderColor: '#2f4860',
+                        tension: 0.4,
+                        yAxisID: 'y1'
                     }
                 ];
             } else if (ehPCouPV) {
                 datasets = [
-                    { 
-                        label: "Vazão", 
-                        data: dados.map((i: any) => i.vazao_calha), 
-                        borderColor: '#ff6384', 
-                        borderWidth: 3, 
-                        tension: 0.4, 
-                        yAxisID: 'y'  
+                    {
+                        label: "Vazão",
+                        data: dados.map((i: any) => i.vazao_calha),
+                        borderColor: '#ff6384',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        yAxisID: 'y'
                     },
-                    { 
-                        label: "Vazão Mina", 
-                        data: dados.map((i: any) => i.vazao_bombeamento), 
-                        borderColor: '#00bb7e', 
+                    {
+                        label: "Vazão Mina",
+                        data: dados.map((i: any) => i.vazao_bombeamento),
+                        borderColor: '#00bb7e',
                         borderWidth: 1,
-                        tension: 0.4, 
-                        yAxisID: 'y1' 
+                        tension: 0.4,
+                        yAxisID: 'y1'
                     },
-                    { 
-                        label: "Precipitação", 
-                        data: dados.map((i: any) => i.precipitacao), 
-                        borderColor: '#2f4860', 
+                    {
+                        label: "Precipitação",
+                        data: dados.map((i: any) => i.precipitacao),
+                        borderColor: '#2f4860',
                         borderWidth: 1,
-                        tension: 0.4, 
+                        tension: 0.4,
                         yAxisID: 'y1'
                     }
                 ];
@@ -345,7 +354,7 @@ export const usePiezometroData = () => {
             const total = dados.length;
             const avgPrecip = total > 0 ? dados.reduce((acc: number, curr: any) => acc + (curr.precipitacao || 0), 0) / total : 0;
             const avgVazaoMina = total > 0 ? dados.reduce((acc: number, curr: any) => acc + (curr.vazao_bombeamento || 0), 0) / total : 0;
-            
+
             let avgNivel = 0;
             let avgCotaSuperficie = 0;
             let avgCotaBase = 0;
@@ -396,7 +405,7 @@ export const usePiezometroData = () => {
                 yAxisConfig.beginAtZero = true;
                 yAxisConfig.suggestedMin = 0;
                 yAxisConfig.min = 0;
-                
+
                 setLineOptions({
                     maintainAspectRatio: false,
                     aspectRatio: 0.6,
@@ -441,7 +450,7 @@ export const usePiezometroData = () => {
                     text: 'Cota/Nível (m)',
                     color: '#ccc'
                 };
-                
+
                 setLineOptions({
                     maintainAspectRatio: false,
                     aspectRatio: 0.6,
@@ -486,7 +495,7 @@ export const usePiezometroData = () => {
                     text: 'Nível/Cota (m)',
                     color: '#ccc'
                 };
-                
+
                 setLineOptions({
                     maintainAspectRatio: false,
                     aspectRatio: 0.6,
@@ -527,6 +536,8 @@ export const usePiezometroData = () => {
                 });
             }
 
+            Swal.close();
+
         } catch (err) {
             Swal.fire({
                 icon: "error",
@@ -541,22 +552,22 @@ export const usePiezometroData = () => {
     }, [filters]);
 
     const buscarAnaliseQuimica = useCallback(async (nRegistro: number) => {
-    if (analisesQuimicas[nRegistro]) return;
-    
-    setCarregandoAnalise(prev => ({ ...prev, [nRegistro]: true }));
-    
-    try {
-        const resposta = await getAnaliseQuimicaPorRegistro(nRegistro);
-        setAnalisesQuimicas(prev => ({
-            ...prev,
-            [nRegistro]: resposta.data
-        }));
-    } catch (error) {
-        console.error(`Erro ao buscar análise do registro ${nRegistro}:`, error);
-    } finally {
-        setCarregandoAnalise(prev => ({ ...prev, [nRegistro]: false }));
-    }
-}, [analisesQuimicas]);
+        if (analisesQuimicas[nRegistro]) return;
+
+        setCarregandoAnalise(prev => ({ ...prev, [nRegistro]: true }));
+
+        try {
+            const resposta = await getAnaliseQuimicaPorRegistro(nRegistro);
+            setAnalisesQuimicas(prev => ({
+                ...prev,
+                [nRegistro]: resposta.data
+            }));
+        } catch (error) {
+            console.error(`Erro ao buscar análise do registro ${nRegistro}:`, error);
+        } finally {
+            setCarregandoAnalise(prev => ({ ...prev, [nRegistro]: false }));
+        }
+    }, [analisesQuimicas]);
 
 
     // Efeitos
@@ -568,6 +579,26 @@ export const usePiezometroData = () => {
         carregarPiezometrosFiltrados(filters.tipoFiltroSelecionado);
     }, [filters.tipoFiltroSelecionado, carregarPiezometrosFiltrados]);
 
+    // Limpar dados quando os filtros mudarem
+    useEffect(() => {
+        setLineData(null);
+        setSummary({
+            nivelEstatico: 0,
+            cotaSuperficie: 0,
+            cotaBase: 0,
+            precipitacao: 0,
+            vazaoMina: 0,
+            vazao: 0,
+            total: 0
+        });
+        setTabelaDados([]);
+        setColetaDados([]);
+        setExpandedRows(null);
+        setAnalisesQuimicas({});
+        setAnaliseIANivelEstatico(null);
+        setCarregandoIANivelEstatico(false);
+    }, [filters]);
+
     return {
         // Estados
         filters,
@@ -578,20 +609,20 @@ export const usePiezometroData = () => {
         summary,
         tabelaDados,
         opcoesFiltro,
-        
+
         // Funções
         updateFilters,
         handleSelecionarPiezometro,
         buscarGrafico,
 
         //relacionados as dados das coletas
-        coletaDados,        
-        expandedRows,       
+        coletaDados,
+        expandedRows,
         setExpandedRows,
 
         //relacionados as analises quimicas dentro de coletas
-        analisesQuimicas,        
-        carregandoAnalise,       
+        analisesQuimicas,
+        carregandoAnalise,
         buscarAnaliseQuimica,
 
         // relacionados a analise ia nivel estatico

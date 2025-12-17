@@ -22,11 +22,11 @@ export default function AnaliseIA({ analise, carregando }: AnaliseIAProps) {
     if (analise) {
         return (
             <div className="card mt-4">
-                <h5>Análise da IA de Nível Estático</h5>
-                <p>{analise}</p>
+                <h5>Análise da IA</h5>
+                <div id="textoApareceNoPdf" style={{ whiteSpace: 'pre-line' }}>{analise}</div>
             </div>
         );
     }
 
     return null;
-}
+} 

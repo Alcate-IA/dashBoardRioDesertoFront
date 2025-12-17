@@ -80,7 +80,7 @@ export const webHookIAAnaliseQualidade = async (dto: any, cdPiezometro: number |
         dto: dto
     };
     try {
-        const response = await axios.post("esperando o kaua fazer esse cara", payload); // <-------------------------
+        const response = await axios.post("https://n8n.alcateia-ia.com/webhook/envio-analise-db-qualidade", payload);
         return response.data;
     } catch (error) {
         console.error("Erro ao enviar dados para o webhook:", error);

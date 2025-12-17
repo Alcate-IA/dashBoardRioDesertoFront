@@ -1,3 +1,8 @@
+//só para onde for ter pdf
+.avoid-break {
+    page-break-inside: avoid;
+}
+
 /* Rio Deserto Custom Styles */
 :root {
     --rio-deserto-bg: #1a1a1a;
@@ -210,7 +215,7 @@ body {
     padding: 0.25rem !important;
 }
 
-.p-datepicker:not(.p-datepicker-inline) .p-datepicker-calendar td > span {
+.p-datepicker:not(.p-datepicker-inline) .p-datepicker-calendar td>span {
     width: 2rem !important;
     height: 2rem !important;
     font-size: 0.875rem !important;
@@ -428,7 +433,7 @@ body {
         box-sizing: border-box !important;
     }
 
-    .p-datepicker:not(.p-datepicker-inline) .p-datepicker-calendar td > span {
+    .p-datepicker:not(.p-datepicker-inline) .p-datepicker-calendar td>span {
         width: 1.75rem !important;
         height: 1.75rem !important;
         font-size: 0.75rem !important;
@@ -658,6 +663,7 @@ body {
 }
 
 @media (max-width: 375px) {
+
     .p-calendar .p-datepicker-trigger,
     .p-calendar .p-input-icon {
         width: 2.25rem !important;
@@ -730,33 +736,33 @@ body {
 /* Coleta Table Responsive */
 .coleta-table-responsive {
     @media (max-width: 768px) {
-        .p-datatable-thead > tr > th {
+        .p-datatable-thead>tr>th {
             font-size: 0.7rem !important;
             padding: 0.5rem 0.25rem !important;
         }
-        
-        .p-datatable-tbody > tr > td {
+
+        .p-datatable-tbody>tr>td {
             font-size: 0.75rem !important;
             padding: 0.5rem 0.25rem !important;
         }
-        
+
         .p-row-toggler {
             width: 1.5rem !important;
             height: 1.5rem !important;
         }
-        
+
         .p-row-toggler .p-row-toggler-icon {
             font-size: 0.7rem !important;
         }
     }
-    
+
     @media (max-width: 480px) {
-        .p-datatable-thead > tr > th {
+        .p-datatable-thead>tr>th {
             font-size: 0.65rem !important;
             padding: 0.4rem 0.2rem !important;
         }
-        
-        .p-datatable-tbody > tr > td {
+
+        .p-datatable-tbody>tr>td {
             font-size: 0.7rem !important;
             padding: 0.4rem 0.2rem !important;
         }

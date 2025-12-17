@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import FilterBar from "./FilterBar";
 import GraficosAnalise from "./GraficosAnalise";
 import AnaliseIA from "./AnaliseIA"; 
-import { getPiezometrosRelatorio, getColetaCompletaPorIdDataInicioDataFimApi, webHookIAAnaliseQualidade } from '@/service/api';
+import { getPiezometrosRelatorio, getColetaCompletaPorIdDataInicioDataFimApi } from '@/service/api';
 
 export type QualidadeAguaProps = {
     initialCdPiezometro?: number; 
@@ -28,10 +28,6 @@ export default function QualidadeAgua({
     
     const [dadosColeta, setDadosColeta] = useState<any>(null);
     const [autoApplied, setAutoApplied] = useState(false);
-
-    // Estados para a análise da IA
-    const [analiseIA, setAnaliseIA] = useState<string | null>(null);
-    const [carregandoIA, setCarregandoIA] = useState(false);
 
     const opcoesFiltro = [
         { label: "Todos os Tipos", value: null },
@@ -94,8 +90,6 @@ export default function QualidadeAgua({
         }
 
         setCarregando(true);
-        setCarregandoIA(true);
-        setAnaliseIA(null);
         setDadosColeta(null);
 
         const formatMonthYear = (date: Date) => {
@@ -111,17 +105,10 @@ export default function QualidadeAgua({
             const response = await getColetaCompletaPorIdDataInicioDataFimApi(pontoSelecionado, inicio, fim);
             const data = response.data;
             setDadosColeta(data);
-            
-            if (data) {
-                const analise = await webHookIAAnaliseQualidade(data, pontoSelecionado);
-                setAnaliseIA(analise);
-            }
         } catch (error) {
             console.error("Erro ao buscar dados:", error);
-            setAnaliseIA("Ocorreu um erro ao consultar a IA.");
         } finally {
             setCarregando(false);
-            setCarregandoIA(false);
         }
     };
 
@@ -144,7 +131,7 @@ export default function QualidadeAgua({
                 onBuscar={handleBuscar}
             />
 
-            <AnaliseIA carregando={carregandoIA} analise={analiseIA} />
+            <AnaliseIA carregando={carregando} analise={null} />
 
             {dadosColeta && dadosColeta.amostras && (
                 <div className="mt-5">

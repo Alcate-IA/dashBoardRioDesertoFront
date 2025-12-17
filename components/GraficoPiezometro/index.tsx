@@ -1,7 +1,7 @@
 //CORPO PRINCIPAL DO COMPONENTE DE GRÁFICO PIEZÔMETRO
 
 "use client";
-
+import { useRef } from "react";
 import { Chart } from "primereact/chart";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -12,6 +12,7 @@ import { usePiezometroData } from "@/hooks/usePiezometroData";
 import FilterBar from "./FilterBar";
 
 export default function GraficoPiezometro() {
+  const chartRef = useRef<Chart>(null);
   const {
     filters,
     piezometros,
@@ -40,6 +41,78 @@ export default function GraficoPiezometro() {
     analiseIANivelEstatico,
     carregandoIANivelEstatico,
   } = usePiezometroData();
+
+  //ESSE CARA É O RESPONSA DE GERAR O PDF 
+  const handleGeneratePdf = async () => {
+    const chartCanvas = chartRef.current?.getCanvas();
+    const analiseIAEl = document.getElementById("textoApareceNoPdf");
+
+    if (!chartCanvas || !analiseIAEl) {
+      console.error("Não foi possível encontrar os elementos para gerar o PDF.");
+      return;
+    }
+
+    const finalPrintContainer = document.createElement("div");
+    finalPrintContainer.style.padding = "20px";
+
+    const selectedPiezometer = piezometros.find(p => p.value === filters.idSelecionado);
+    const piezometerName = selectedPiezometer ? selectedPiezometer.label : 'Não selecionado';
+
+    const piezometerNameEl = document.createElement("h3");
+    piezometerNameEl.textContent = `${piezometerName}:`;
+    piezometerNameEl.style.marginBottom = "20px";
+    piezometerNameEl.style.color = "#000";
+
+    finalPrintContainer.appendChild(piezometerNameEl);
+
+    const reportContainer = document.createElement("div");
+    reportContainer.style.backgroundColor = "#333";
+    reportContainer.style.color = "#fff";
+    reportContainer.style.padding = "20px";
+
+    const chartHeaderEl = document
+      .querySelector(".chart-header")
+      ?.cloneNode(true);
+    if (chartHeaderEl) {
+      reportContainer.appendChild(chartHeaderEl);
+    }
+
+    const chartDataURL = chartCanvas.toDataURL("image/png");
+    const chartImage = document.createElement("img");
+    chartImage.src = chartDataURL;
+    chartImage.style.width = "100%";
+    reportContainer.appendChild(chartImage);
+
+    finalPrintContainer.appendChild(reportContainer);
+
+    const analiseText = (analiseIAEl as HTMLElement).innerText;
+    const analiseContainer = document.createElement('div');
+    analiseContainer.style.marginTop = '20px';
+
+    const lines = analiseText.split('\n');
+    lines.forEach(line => {
+      const p = document.createElement('p');
+      p.textContent = line || '\u00A0';
+      p.style.color = 'black';
+      p.style.margin = '0';
+      p.style.breakInside = 'avoid';
+      analiseContainer.appendChild(p);
+    });
+    finalPrintContainer.appendChild(analiseContainer);
+
+
+    const html2pdf = (await import("html2pdf.js")).default;
+
+    const opt = {
+      margin: 1,
+      filename: "grafico-e-analise.pdf",
+      image: { type: "jpeg" as const, quality: 0.98 },
+      html2canvas: { scale: 2, letterRendering: true },
+      jsPDF: { unit: "in", format: "letter", orientation: "landscape" as const },
+    };
+
+    html2pdf().from(finalPrintContainer).set(opt).save();
+  };
 
   // Funções auxiliares (mantidas do código original)
   function eTipoCalhasOuPontoVazao(tipo: string): boolean {
@@ -169,7 +242,7 @@ export default function GraficoPiezometro() {
         {lineData.datasets.map((dataset: any) => {
           const label =
             dataset.label === "Cota Superfície" &&
-            filters.tipoSelecionado === "PR"
+              filters.tipoSelecionado === "PR"
               ? "Cota"
               : dataset.label;
 
@@ -188,8 +261,17 @@ export default function GraficoPiezometro() {
   };
 
   return (
-    <div className="col-12">
-      <h1>Nível Estático, precipitação e vazão</h1>
+    <div id="dashboard-content" className="col-12">
+      <div className="flex justify-content-between align-items-center mb-4">
+        <h1>Nível Estático, precipitação e vazão</h1>
+
+        {analiseIANivelEstatico && (
+          <button onClick={handleGeneratePdf} className="p-button p-component">
+            Exportar PDF
+          </button>
+        )}
+      </div>
+
       {/* Barra de Filtros */}
       <FilterBar
         opcoesFiltro={opcoesFiltro}
@@ -209,22 +291,22 @@ export default function GraficoPiezometro() {
       />
 
       {/* GRÁFICO */}
-      <div className="chart-container">
+      <div className="chart-container avoid-break">
         <div className="chart-header">
           <div className="chart-title">
             {tabelaDados.length > 0 && filters.tipoSelecionado
-              ? `Dados do ${
-                  filters.tipoSelecionado === "PP" ||
-                  filters.tipoSelecionado === "PR"
-                    ? "Piezômetro"
-                    : "Recurso Hídrico"
-                }`
+              ? `Dados do ${filters.tipoSelecionado === "PP" ||
+                filters.tipoSelecionado === "PR"
+                ? "Piezômetro"
+                : "Recurso Hídrico"
+              }`
               : "Níveis Piezométricos e Dados Ambientais"}
           </div>
           {renderizarLegendaGrafico()}
         </div>
         {lineData ? (
           <Chart
+            ref={chartRef}
             type="line"
             data={lineData}
             options={lineOptions}
@@ -241,12 +323,17 @@ export default function GraficoPiezometro() {
       </div>
 
       {/* ANÁLISE DA IA */}
-      <AnaliseIA analise={analiseIANivelEstatico} carregando={carregandoIANivelEstatico} />
+      <div id="analise-ia-container" className="avoid-break mb-5">
+        <AnaliseIA
+          analise={analiseIANivelEstatico}
+          carregando={carregandoIANivelEstatico}
+        />
+      </div>
 
       {/* LISTA DOS DADOS DA TABELA */}
-      
+
       {tabelaDados.length > 0 && filters.tipoSelecionado && (
-        <div className="card">
+        <div className="card avoid-break">
           <h5 className="mb-4 text-white">
             Painel de Dados - {filters.tipoSelecionado}
           </h5>
@@ -265,14 +352,16 @@ export default function GraficoPiezometro() {
       {/* TABELA DE COLETA */}
 
       {coletaDados && coletaDados.length > 0 && (
-        <ColetaTable
-          data={coletaDados}
-          expandedRows={expandedRows}
-          onRowToggle={(e) => setExpandedRows(e.data)}
-          analisesQuimicas={analisesQuimicas}
-          carregandoAnalise={carregandoAnalise}
-          buscarAnaliseQuimica={buscarAnaliseQuimica}
-        />
+        <div className="avoid-break">
+          <ColetaTable
+            data={coletaDados}
+            expandedRows={expandedRows}
+            onRowToggle={(e) => setExpandedRows(e.data)}
+            analisesQuimicas={analisesQuimicas}
+            carregandoAnalise={carregandoAnalise}
+            buscarAnaliseQuimica={buscarAnaliseQuimica}
+          />
+        </div>
       )}
     </div>
   );
