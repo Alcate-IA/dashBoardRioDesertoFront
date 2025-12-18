@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from 'react';
-import { Button } from 'primereact/button';
-import Image from 'next/image';
+
+import { Calendar } from "primereact/calendar";
+import { Dropdown } from "primereact/dropdown";
+import { Button } from "primereact/button";
+
 
 export default function MapaPage() {
     const [zoom, setZoom] = useState(100);
@@ -21,33 +24,66 @@ export default function MapaPage() {
 
     return (
         <div className="col-12">
+
             <div className="flex justify-content-between align-items-center mb-4">
                 <h1 className="m-0">Mapa de Monitoramento Ambiental</h1>
-                <div className="flex gap-2">
-                    <Button
-                        icon="pi pi-search-minus"
-                        onClick={handleZoomOut}
-                        disabled={zoom <= 50}
-                        tooltip="Diminuir zoom"
-                        tooltipOptions={{ position: 'bottom' }}
-                    />
-                    <Button
-                        icon="pi pi-refresh"
-                        onClick={handleResetZoom}
-                        tooltip="Resetar zoom"
-                        tooltipOptions={{ position: 'bottom' }}
-                    />
-                    <Button
-                        icon="pi pi-search-plus"
-                        onClick={handleZoomIn}
-                        disabled={zoom >= 300}
-                        tooltip="Aumentar zoom"
-                        tooltipOptions={{ position: 'bottom' }}
-                    />
-                    <span className="flex align-items-center ml-2 text-sm text-600">
-                        {zoom}%
-                    </span>
+            </div>
+
+            <div className="card filter-bar">
+                <div className="filter-item">
+                    <span className="filter-label">Período</span>
+                    <div className="flex gap-2">
+                        <Calendar
+                            dateFormat="mm/yy"
+                            view="month"
+                            placeholder="Início"
+                            showIcon
+                            panelClassName="calendar-panel-fixed"
+                            appendTo="self"
+                        />
+                        <Calendar
+                            dateFormat="mm/yy"
+                            view="month"
+                            placeholder="Fim"
+                            showIcon
+                            panelClassName="calendar-panel-fixed"
+                            appendTo="self"
+                        />
+                    </div>
                 </div>
+                <div className="ml-auto">
+                    <Button
+                        label="APLICAR"
+                        className="p-button-warning font-bold"
+                    />
+                </div>
+            </div>
+
+
+            <div className="flex gap-2 justify-content-end mb-4">
+                <Button
+                    icon="pi pi-search-minus"
+                    onClick={handleZoomOut}
+                    disabled={zoom <= 50}
+                    tooltip="Diminuir zoom"
+                    tooltipOptions={{ position: 'bottom' }}
+                />
+                <Button
+                    icon="pi pi-refresh"
+                    onClick={handleResetZoom}
+                    tooltip="Resetar zoom"
+                    tooltipOptions={{ position: 'bottom' }}
+                />
+                <Button
+                    icon="pi pi-search-plus"
+                    onClick={handleZoomIn}
+                    disabled={zoom >= 300}
+                    tooltip="Aumentar zoom"
+                    tooltipOptions={{ position: 'bottom' }}
+                />
+                <span className="flex align-items-center ml-2 text-sm text-600">
+                    {zoom}%
+                </span>
             </div>
 
             <div className="surface-card shadow-2 border-round p-3" style={{ height: 'calc(100vh - 200px)' }}>
