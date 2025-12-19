@@ -6,6 +6,8 @@ import GraficosAnalise from "./GraficosAnalise";
 import AnaliseIA from "./AnaliseIA";
 import { getPiezometrosRelatorio, getColetaCompletaPorIdDataInicioDataFimApi, webHookIAAnaliseQualidade } from '@/service/api';
 import Swal from "sweetalert2";
+import { SplitButton } from 'primereact/splitbutton';
+import { saveAs } from 'file-saver';
 
 export type QualidadeAguaProps = {
     initialCdPiezometro?: number;
@@ -192,6 +194,61 @@ export default function QualidadeAgua({
         html2pdf().from(finalPrintContainer).set(opt).save();
     };
 
+    const handleGenerateWord = async () => {
+        const analiseIAEl = document.getElementById("textoApareceNoPdf");
+        const chartsContainer = document.getElementById("analises-scrap");
+
+        if (!analiseIAEl || !chartsContainer) {
+            console.error("Não foi possível encontrar os elementos para gerar o Word.");
+            return;
+        }
+
+        const selectedPoint = pontos.find(p => p.value === pontoSelecionado);
+        const pointName = selectedPoint ? selectedPoint.label : 'Ponto Selecionado';
+
+        let chartsHtml = '';
+        const chartContainers = chartsContainer.querySelectorAll('.chart-container');
+
+        chartContainers.forEach((container) => {
+            const canvas = container.querySelector('canvas');
+            if (canvas) {
+                const chartDataURL = canvas.toDataURL("image/png");
+                chartsHtml += `
+                    <div style="margin-top: 40px; margin-bottom: 40px; text-align: center;">
+                        <img src="${chartDataURL}" style="width: 600px;" />
+                    </div>
+                `;
+            }
+        });
+
+        const analiseText = (analiseIAEl as HTMLElement).innerText;
+        const analiseLines = analiseText.split('\n').map(line => `<p style="margin: 0;">${line || '&nbsp;'}</p>`).join('');
+
+        const htmlString = `
+            <div style="font-family: Arial; padding: 20px;">
+                <h3 style="color: #000; margin-bottom: 20px;">${pointName}:</h3>
+                <div style="margin-bottom: 20px; color: #000;">
+                    ${analiseLines}
+                </div>
+                ${chartsHtml}
+            </div>
+        `;
+
+        const opt = {
+            orientation: 'landscape' as const,
+            margins: { top: 720, right: 720, bottom: 720, left: 720 },
+        };
+
+        try {
+            const htmlToDocx = (await import('html-to-docx')).default;
+            const fileBuffer = await htmlToDocx(htmlString, null, opt);
+            saveAs(fileBuffer as Blob, "relatorio-qualidade.docx");
+        } catch (error) {
+            console.error("Erro ao gerar Word:", error);
+            Swal.fire({ icon: 'error', title: 'Erro ao gerar Word', text: 'Ocorreu um problema ao tentar exportar para Word.' });
+        }
+    };
+
     const handleBuscar = async () => {
         if (!pontoSelecionado || !dataInicio || !dataFim) {
             console.warn("Selecione o ponto e as datas.");
@@ -263,14 +320,31 @@ export default function QualidadeAgua({
         }
     };
 
+    const exportItems = [
+        {
+            label: 'PDF',
+            icon: 'pi pi-file-pdf',
+            command: handleGeneratePdf
+        },
+        {
+            label: 'Word',
+            icon: 'pi pi-file-word',
+            command: handleGenerateWord
+        }
+    ];
+
     return (
         <div className="col-12">
             <div className="flex justify-content-between align-items-center mb-4">
                 <h1>Qualidade Água</h1>
                 {analiseIA && (
-                    <button onClick={handleGeneratePdf} className="p-button p-component">
-                        Exportar PDF
-                    </button>
+                    <SplitButton
+                        label="Exportar"
+                        icon="pi pi-download"
+                        model={exportItems}
+                        onClick={handleGeneratePdf}
+                        className="p-button-secondary"
+                    />
                 )}
             </div>
 
