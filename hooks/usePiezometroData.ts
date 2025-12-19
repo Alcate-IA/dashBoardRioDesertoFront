@@ -627,6 +627,7 @@ export const usePiezometroData = () => {
 
         // relacionados a analise ia nivel estatico
         analiseIANivelEstatico,
+        setAnaliseIANivelEstatico,
         carregandoIANivelEstatico,
     };
 };
