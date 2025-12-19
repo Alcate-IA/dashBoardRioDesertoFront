@@ -7,9 +7,12 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import ColetaTable from "./ColetaTable";
 import AnaliseIA from "./AnaliseIA";
+import { SplitButton } from 'primereact/splitbutton';
 
 import { usePiezometroData } from "@/hooks/usePiezometroData";
 import FilterBar from "./FilterBar";
+import { saveAs } from 'file-saver';
+import Swal from "sweetalert2";
 
 export default function GraficoPiezometro() {
   const chartRef = useRef<Chart>(null);
@@ -113,6 +116,52 @@ export default function GraficoPiezometro() {
     };
 
     html2pdf().from(finalPrintContainer).set(opt).save();
+  };
+
+  const handleGenerateWord = async () => {
+    const chartCanvas = chartRef.current?.getCanvas();
+    const analiseIAEl = document.getElementById("textoApareceNoPdf");
+
+    if (!chartCanvas || !analiseIAEl) {
+      console.error("Não foi possível encontrar os elementos para gerar o Word.");
+      return;
+    }
+
+    const selectedPiezometer = piezometros.find(p => p.value === filters.idSelecionado);
+    const piezometerName = selectedPiezometer ? selectedPiezometer.label : 'Não selecionado';
+
+    const chartDataURL = chartCanvas.toDataURL("image/png");
+
+    const analiseText = (analiseIAEl as HTMLElement).innerText;
+    const analiseLines = analiseText.split('\n').map(line => `<p style="margin: 0;">${line || '&nbsp;'}</p>`).join('');
+
+    const htmlString = `
+      <div style="font-family: Arial; padding: 20px;">
+        <h3 style="color: #000; margin-bottom: 20px;">${piezometerName}:</h3>
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="${chartDataURL}" style="width: 600px;" />
+        </div>
+
+        <div style="margin-top: 20px; color: #000;">
+          ${analiseLines} 
+        </div>
+      </div>
+    `;
+
+    const opt = {
+      orientation: 'landscape' as const,
+      margins: { top: 720, right: 720, bottom: 720, left: 720 },
+    };
+
+    try {
+      const htmlToDocx = (await import('html-to-docx')).default;
+      const fileBuffer = await htmlToDocx(htmlString, null, opt);
+      saveAs(fileBuffer as Blob, "grafico-e-analise.docx");
+    } catch (error) {
+      console.error("Erro ao gerar Word:", error);
+      Swal.fire({ icon: 'error', title: 'Erro ao gerar Word', text: 'Ocorreu um problema ao tentar exportar para Word.' });
+    }
   };
 
   // Funções auxiliares (mantidas do código original)
@@ -261,15 +310,32 @@ export default function GraficoPiezometro() {
     );
   };
 
+  const exportItems = [
+    {
+      label: 'PDF',
+      icon: 'pi pi-file-pdf',
+      command: handleGeneratePdf
+    },
+    {
+      label: 'Word',
+      icon: 'pi pi-file-word',
+      command: handleGenerateWord
+    }
+  ];
+
   return (
     <div id="dashboard-content" className="col-12">
       <div className="flex justify-content-between align-items-center mb-4">
         <h1>Nível Estático, precipitação e vazão</h1>
 
         {analiseIANivelEstatico && (
-          <button onClick={handleGeneratePdf} className="p-button p-component">
-            Exportar PDF
-          </button>
+          <SplitButton
+            label="Exportar"
+            icon="pi pi-download"
+            model={exportItems}
+            onClick={handleGeneratePdf}
+            className="p-button-secondary"
+          />
         )}
       </div>
 
