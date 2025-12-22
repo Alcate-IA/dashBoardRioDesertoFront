@@ -104,7 +104,10 @@ export default function QualidadeAgua({
         }
 
         const finalPrintContainer = document.createElement("div");
-        finalPrintContainer.style.padding = "20px";
+        finalPrintContainer.style.padding = "0.5in";
+        finalPrintContainer.style.width = "10in";
+        finalPrintContainer.style.backgroundColor = "#fff";
+        finalPrintContainer.style.margin = "0 auto";
 
         const selectedPoint = pontos.find(p => p.value === pontoSelecionado);
         const pointName = selectedPoint ? selectedPoint.label : 'Ponto Selecionado';
@@ -119,7 +122,7 @@ export default function QualidadeAgua({
         const analiseText = (analiseIAEl as HTMLElement).innerText;
         const analiseContainer = document.createElement('div');
         analiseContainer.style.marginBottom = '20px';
-        analiseContainer.style.pageBreakInside = 'avoid';
+        analiseContainer.style.width = '100%';
 
         const lines = analiseText.split('\n');
         lines.forEach(line => {
@@ -127,7 +130,7 @@ export default function QualidadeAgua({
             p.textContent = line || '\u00A0';
             p.style.color = 'black';
             p.style.margin = '0';
-            p.style.breakInside = 'avoid';
+            p.style.lineHeight = '1.5';
             analiseContainer.appendChild(p);
         });
         finalPrintContainer.appendChild(analiseContainer);
@@ -162,20 +165,21 @@ export default function QualidadeAgua({
             }
 
             const wrapper = document.createElement('div');
-            wrapper.style.width = '65%';
-            wrapper.style.marginLeft = 'auto';
-            wrapper.style.marginRight = 'auto';
-            wrapper.style.marginTop = '40px';
-            wrapper.style.marginBottom = '40px';
-            wrapper.style.textAlign = 'center';
+            wrapper.style.width = '100%';
+            wrapper.style.display = 'flex';
+            wrapper.style.justifyContent = 'center';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.flexDirection = 'column';
+            wrapper.style.paddingTop = '40px';
+            wrapper.style.paddingBottom = '40px';
+            wrapper.style.pageBreakBefore = 'always';
             wrapper.style.pageBreakInside = 'avoid';
 
-            if (index < chartContainers.length - 1) {
-                wrapper.style.pageBreakAfter = 'always';
-            }
+            containerClone.style.width = '90%';
+            containerClone.style.margin = '0';
+            containerClone.style.textAlign = 'left';
 
             wrapper.appendChild(containerClone);
-
             finalPrintContainer.appendChild(wrapper);
         });
 
@@ -183,12 +187,17 @@ export default function QualidadeAgua({
         const html2pdf = (await import("html2pdf.js")).default;
 
         const opt = {
-            margin: 0.2,
+            margin: 0,
             filename: "relatorio-qualidade.pdf",
             image: { type: "jpeg" as const, quality: 0.98 },
-            html2canvas: { scale: 2, letterRendering: true },
+            html2canvas: {
+                scale: 2,
+                letterRendering: true,
+                useCORS: true,
+                windowWidth: 1400
+            },
             jsPDF: { unit: "in", format: "letter", orientation: "landscape" as const },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            pagebreak: { mode: ['css', 'legacy'] }
         };
 
         html2pdf().from(finalPrintContainer).set(opt).save();
