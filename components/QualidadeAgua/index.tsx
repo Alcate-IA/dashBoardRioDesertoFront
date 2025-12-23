@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import FilterBar from "./FilterBar";
 import GraficosAnalise from "./GraficosAnalise";
 import AnaliseIA from "./AnaliseIA";
-import { getPiezometrosRelatorio, getColetaCompletaPorIdDataInicioDataFimApi, webHookIAAnaliseQualidade } from '@/service/api';
+import { getPiezometrosRelatorio, postColetaCompletaFiltroApi, webHookIAAnaliseQualidade, getParametrosLegislacaoBuscaDadosRelacionados } from '@/service/api';
 import Swal from "sweetalert2";
 import { SplitButton } from 'primereact/splitbutton';
 import { saveAs } from 'file-saver';
@@ -30,6 +30,8 @@ export default function QualidadeAgua({
     const [dataFim, setDataFim] = useState<Date | null>(null);
     const [carregando, setCarregando] = useState(false);
     const [pontos, setPontos] = useState<any[]>([]);
+    const [itensSelecionados, setItensSelecionados] = useState<number[]>([]);
+    const [parametros, setParametros] = useState<any[]>([]);
 
     const [dadosColeta, setDadosColeta] = useState<any>(null);
     const [autoApplied, setAutoApplied] = useState(false);
@@ -66,9 +68,27 @@ export default function QualidadeAgua({
     }, [tipoFiltroSelecionado]);
 
     useEffect(() => {
+        const carregarParametros = async () => {
+            try {
+                const response = await getParametrosLegislacaoBuscaDadosRelacionados();
+                const dados = response.data;
+                const uniqueAnalyses = Array.from(new Map(dados.map((item: any) => [item.id_analise, item])).values());
+                setParametros(uniqueAnalyses);
+
+                if (itensSelecionados.length === 0) {
+                    setItensSelecionados(uniqueAnalyses.map((p: any) => p.id_analise));
+                }
+            } catch (error) {
+                console.error("Erro ao carregar parâmetros da legislação:", error);
+            }
+        };
+        carregarParametros();
+    }, []);
+
+    useEffect(() => {
         setDadosColeta(null);
         setAnaliseIA(null);
-    }, [tipoFiltroSelecionado, pontoSelecionado, dataInicio, dataFim]);
+    }, [tipoFiltroSelecionado, pontoSelecionado, dataInicio, dataFim, itensSelecionados]);
 
     const parseMesAno = (mesAno?: string | null): Date | null => {
         if (!mesAno) return null;
@@ -297,12 +317,16 @@ export default function QualidadeAgua({
             const inicio = formatMonthYear(dataInicio);
             const fim = formatMonthYear(dataFim);
 
-            const response = await getColetaCompletaPorIdDataInicioDataFimApi(pontoSelecionado, inicio, fim);
+            const response = await postColetaCompletaFiltroApi(pontoSelecionado, inicio, fim, itensSelecionados);
             const data = response.data;
             setDadosColeta(data);
 
             if (data && data.amostras) {
-                const iaResponse = await webHookIAAnaliseQualidade(data, pontoSelecionado) as any;
+                const filtrosStrings = parametros
+                    .filter(p => itensSelecionados.includes(p.id_analise))
+                    .map(p => `${p.nome} (${p.simbolo})`);
+
+                const iaResponse = await webHookIAAnaliseQualidade(data, pontoSelecionado, filtrosStrings) as any;
                 if (typeof iaResponse === 'string') {
                     setAnaliseIA(iaResponse);
                 } else if (iaResponse && iaResponse[0] && iaResponse[0].output) {
@@ -370,6 +394,9 @@ export default function QualidadeAgua({
                 onDataInicioChange={setDataInicio}
                 onDataFimChange={setDataFim}
                 onBuscar={handleBuscar}
+                itensSelecionados={itensSelecionados}
+                onItensSelecionadosChange={setItensSelecionados}
+                parametros={parametros}
             />
 
             {dadosColeta && dadosColeta.amostras && (

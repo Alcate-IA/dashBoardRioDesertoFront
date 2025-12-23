@@ -3,7 +3,7 @@ import axios from "axios";
 export const rota = axios.create({
     baseURL: "http://192.168.100.95:8080",
     // baseURL: "http://localhost:8080",
-    timeout: 10000,
+    timeout: 400000,
 });
 
 // Busca piezômetros com opção de filtro por tipos (array de strings)
@@ -47,12 +47,12 @@ export const getColetaPorIdDataInicioDataFimApi = (id: number, inicio: string, f
 };
 
 // Usado no relatório de qualidade da água (QualidadeAgua)
-export const getColetaCompletaPorIdDataInicioDataFimApi = (id: number, inicio: string, fim: string) => {
-    return rota.get(`/relatorios/coleta-completa/${id}/filtro`, {
-        params: {
-            mesAnoInicio: inicio,
-            mesAnoFim: fim
-        }
+export const postColetaCompletaFiltroApi = (idZeus: number, mesAnoInicio: string, mesAnoFim: string, filtros: number[]) => {
+    return rota.post("/qualidade-agua/coleta-completa/filtro-analises", {
+        idZeus,
+        mesAnoInicio,
+        mesAnoFim,
+        filtros
     });
 };
 
@@ -63,7 +63,7 @@ export const getAnaliseQuimicaPorRegistro = (nRegistro: number) => {
 export const webHookIAAnaliseNivelEstatico = async (dto: any, cdPiezometro: number | string | null) => {
     const payload = {
         cdPiezometro: cdPiezometro,
-        dto: dto
+        dados: dto
     };
     try {
         const response = await axios.post("https://n8n.alcateia-ia.com/webhook/envio-analise-db", payload);
@@ -74,10 +74,13 @@ export const webHookIAAnaliseNivelEstatico = async (dto: any, cdPiezometro: numb
     }
 };
 
-export const webHookIAAnaliseQualidade = async (dto: any, cdPiezometro: number | string | null): Promise<string | null> => {
+export const webHookIAAnaliseQualidade = async (dto: any, cdPiezometro: number | string | null, filtros: string[]): Promise<string | null> => {
     const payload = {
         cdPiezometro: cdPiezometro,
-        dto: dto
+        dto: {
+            ...dto,
+            filtros: filtros
+        }
     };
     try {
         const response = await axios.post("https://n8n.alcateia-ia.com/webhook/envio-analise-db-qualidade", payload);
@@ -86,4 +89,8 @@ export const webHookIAAnaliseQualidade = async (dto: any, cdPiezometro: number |
         console.error("Erro ao enviar dados para o webhook:", error);
         return null;
     }
+};
+
+export const getParametrosLegislacaoBuscaDadosRelacionados = () => {
+    return rota.get("/parametros-legislacao/filtros");
 };
