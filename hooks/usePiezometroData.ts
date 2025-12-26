@@ -97,6 +97,7 @@ export const usePiezometroData = () => {
     const [carregandoAnalise, setCarregandoAnalise] = useState<Record<number, boolean>>({});
 
     const [analiseIANivelEstatico, setAnaliseIANivelEstatico] = useState<string | null>(null);
+    const [analiseOriginalIA, setAnaliseOriginalIA] = useState<string | null>(null);
     const [carregandoIANivelEstatico, setCarregandoIANivelEstatico] = useState<boolean>(false);
 
 
@@ -200,6 +201,7 @@ export const usePiezometroData = () => {
             setCarregando(true);
             setCarregandoIANivelEstatico(true);
             setAnaliseIANivelEstatico(null);
+            setAnaliseOriginalIA(null);
 
             const resposta = await getPiezometroPorIdDataInicioDataFimApi(
                 idSelecionado,
@@ -210,6 +212,7 @@ export const usePiezometroData = () => {
             if (resposta.data && resposta.data.length > 0) {
                 const iaResponse = await webHookIAAnaliseNivelEstatico(resposta.data, idSelecionado);
                 setAnaliseIANivelEstatico(iaResponse[0].output);
+                setAnaliseOriginalIA(iaResponse[0].output);
             }
 
             const respostaColeta = await getColetaPorIdDataInicioDataFimApi(
@@ -596,6 +599,7 @@ export const usePiezometroData = () => {
         setExpandedRows(null);
         setAnalisesQuimicas({});
         setAnaliseIANivelEstatico(null);
+        setAnaliseOriginalIA(null);
         setCarregandoIANivelEstatico(false);
     }, [filters]);
 
@@ -628,6 +632,7 @@ export const usePiezometroData = () => {
         // relacionados a analise ia nivel estatico
         analiseIANivelEstatico,
         setAnaliseIANivelEstatico,
+        analiseOriginalIA,
         carregandoIANivelEstatico,
     };
 };

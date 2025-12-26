@@ -43,6 +43,7 @@ export default function GraficoPiezometro() {
     // relacionados a analise ia nivel estatico
     analiseIANivelEstatico,
     setAnaliseIANivelEstatico,
+    analiseOriginalIA,
     carregandoIANivelEstatico,
   } = usePiezometroData();
 
@@ -393,8 +394,10 @@ export default function GraficoPiezometro() {
       <div id="analise-ia-container" className="avoid-break mb-5">
         <AnaliseIA
           analise={analiseIANivelEstatico}
+          analiseOriginalIA={analiseOriginalIA}
           carregando={carregandoIANivelEstatico}
           onSave={(text) => setAnaliseIANivelEstatico(text)}
+          cdPiezometro={filters.idSelecionado}
         />
       </div>
 
