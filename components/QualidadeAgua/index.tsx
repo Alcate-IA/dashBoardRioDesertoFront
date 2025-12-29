@@ -36,6 +36,7 @@ export default function QualidadeAgua({
     const [dadosColeta, setDadosColeta] = useState<any>(null);
     const [autoApplied, setAutoApplied] = useState(false);
     const [analiseIA, setAnaliseIA] = useState<string | null>(null);
+    const [analiseOriginalIA, setAnaliseOriginalIA] = useState<string | null>(null);
 
     const opcoesFiltro = [
         { label: "Todos os Tipos", value: null },
@@ -88,6 +89,7 @@ export default function QualidadeAgua({
     useEffect(() => {
         setDadosColeta(null);
         setAnaliseIA(null);
+        setAnaliseOriginalIA(null);
     }, [tipoFiltroSelecionado, pontoSelecionado, dataInicio, dataFim, itensSelecionados]);
 
     const parseMesAno = (mesAno?: string | null): Date | null => {
@@ -307,6 +309,7 @@ export default function QualidadeAgua({
             setCarregando(true);
             setDadosColeta(null);
             setAnaliseIA(null);
+            setAnaliseOriginalIA(null);
 
             const formatMonthYear = (date: Date) => {
                 const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -332,12 +335,17 @@ export default function QualidadeAgua({
                 const iaResponse = await webHookIAAnaliseQualidade(data, pontoSelecionado, filtrosStrings, historicoData) as any;
                 if (typeof iaResponse === 'string') {
                     setAnaliseIA(iaResponse);
+                    setAnaliseOriginalIA(iaResponse);
                 } else if (iaResponse && iaResponse[0] && iaResponse[0].output) {
                     setAnaliseIA(iaResponse[0].output);
+                    setAnaliseOriginalIA(iaResponse[0].output);
                 } else if (iaResponse && iaResponse.output) {
                     setAnaliseIA(iaResponse.output);
+                    setAnaliseOriginalIA(iaResponse.output);
                 } else {
-                    setAnaliseIA(JSON.stringify(iaResponse));
+                    const stringified = JSON.stringify(iaResponse);
+                    setAnaliseIA(stringified);
+                    setAnaliseOriginalIA(stringified);
                 }
             }
 
@@ -410,7 +418,9 @@ export default function QualidadeAgua({
             <AnaliseIA
                 carregando={carregando}
                 analise={analiseIA}
+                analiseOriginalIA={analiseOriginalIA}
                 onSave={(text) => setAnaliseIA(text)}
+                idZeus={pontoSelecionado}
             />
         </div>
     );
