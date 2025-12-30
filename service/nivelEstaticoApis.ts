@@ -1,8 +1,7 @@
 import axios from "axios";
 
 export const rota = axios.create({
-    baseURL: "http://192.168.100.95:8080",
-    // baseURL: "http://localhost:8080",
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
     timeout: 1000000,
 });
 

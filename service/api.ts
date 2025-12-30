@@ -1,10 +1,8 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.API_BASE_URL;
-
 export const rota = axios.create({
-    baseURL: API_BASE_URL,
-    timeout: 400000
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    timeout: 1000000,
 });
 
 // Busca piezômetros com opção de filtro por tipos (array de strings)
@@ -27,7 +25,6 @@ export const getPiezometrosRelatorio = (tipos: string | string[] | null = null) 
     return rota.get("/relatorios/piezometros-ativos", { params });
 };
 
-// Dados de nível estático (GraficoPiezometro)
 
 // Usado para dados de coleta simples (GraficoPiezometro - Tabela Coleta)
 export const getColetaPorIdDataInicioDataFimApi = (id: number, inicio: string, fim: string) => {

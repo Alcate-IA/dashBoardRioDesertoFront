@@ -1,9 +1,7 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.API_BASE_URL;
-
 export const rota = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
     timeout: 1000000,
 });
 
