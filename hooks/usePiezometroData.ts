@@ -117,6 +117,57 @@ export const usePiezometroData = () => {
         return tipo === 'PC' || tipo === 'PV';
     };
 
+    const transformarDadosDiarios = (dados: any) => {
+        if (!dados || Array.isArray(dados)) return dados;
+
+        const {
+            precipitacao = [],
+            nivel_estatico = [],
+            vazao_bombeamento = [],
+            vazao_calha = [],
+            cota_superficie,
+            cota_base
+        } = dados;
+
+        const mapaDados: Record<string, any> = {};
+
+        const converterData = (dataRes: string) => {
+            if (dataRes.includes("-")) return dataRes;
+            const [dia, mes, ano] = dataRes.split("/");
+            return `${ano}-${mes}-${dia}`;
+        };
+
+        precipitacao.forEach((item: any) => {
+            const dt = converterData(item.data);
+            if (!mapaDados[dt]) mapaDados[dt] = { mes_ano: dt };
+            mapaDados[dt].precipitacao = item.precipitacao;
+        });
+
+        nivel_estatico.forEach((item: any) => {
+            const dt = converterData(item.data);
+            if (!mapaDados[dt]) mapaDados[dt] = { mes_ano: dt };
+            mapaDados[dt].nivel_estatico = item.nivel_estatico;
+        });
+
+        vazao_bombeamento.forEach((item: any) => {
+            const dt = converterData(item.data);
+            if (!mapaDados[dt]) mapaDados[dt] = { mes_ano: dt };
+            mapaDados[dt].vazao_bombeamento = item.vazao_bombeamento;
+        });
+
+        vazao_calha.forEach((item: any) => {
+            const dt = converterData(item.data);
+            if (!mapaDados[dt]) mapaDados[dt] = { mes_ano: dt };
+            mapaDados[dt].vazao_calha = item.vazao_calha;
+        });
+
+        return Object.values(mapaDados).map((item: any) => ({
+            ...item,
+            cota_superficie: item.cota_superficie ?? cota_superficie,
+            cota_base: item.cota_base ?? cota_base
+        })).sort((a, b) => a.mes_ano.localeCompare(b.mes_ano));
+    };
+
     // Carregar piezômetros filtrados
     const carregarPiezometrosFiltrados = useCallback(async (tipoFiltro: string | null = null) => {
         setCarregando(true);
@@ -211,8 +262,12 @@ export const usePiezometroData = () => {
 
             const resposta = await apiCall;
 
-            const dadosFiltrados = resposta.data.dadosFiltrados || [];
+            let dadosFiltrados = resposta.data.dadosFiltrados || [];
             const historicoCompleto = resposta.data.historicoCompleto || [];
+
+            if (porDia) {
+                dadosFiltrados = transformarDadosDiarios(dadosFiltrados);
+            }
 
             if (dadosFiltrados.length > 0) {
                 const iaResponse = await webHookIAAnaliseNivelEstatico(dadosFiltrados, idSelecionado, historicoCompleto);
