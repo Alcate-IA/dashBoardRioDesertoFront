@@ -25,6 +25,7 @@ interface Filters {
     tipoFiltroSelecionado: string | null;
     dataInicio: Date | null;
     dataFim: Date | null;
+    porDia: boolean;
 }
 
 interface Summary {
@@ -71,7 +72,8 @@ export const usePiezometroData = () => {
         tipoSelecionado: null,
         tipoFiltroSelecionado: null,
         dataInicio: null,
-        dataFim: null
+        dataFim: null,
+        porDia: false
     });
     const [piezometros, setPiezometros] = useState<PiezometroOption[]>([]);
     const [carregando, setCarregando] = useState(false);
@@ -164,7 +166,7 @@ export const usePiezometroData = () => {
 
     // Buscar dados do gráfico
     const buscarGrafico = useCallback(async () => {
-        const { idSelecionado, tipoSelecionado, dataInicio, dataFim } = filters;
+        const { idSelecionado, tipoSelecionado, dataInicio, dataFim, porDia } = filters;
 
         if (!idSelecionado) {
             Swal.fire({ icon: "warning", title: "Selecione um piezômetro" });
@@ -185,8 +187,8 @@ export const usePiezometroData = () => {
             return;
         }
 
-        const inicioFormatado = formatarData(dataInicio);
-        const fimFormatado = formatarData(dataFim);
+        const inicioFormatado = formatarData(dataInicio, porDia);
+        const fimFormatado = formatarData(dataFim, porDia);
 
         try {
             Swal.fire({
@@ -231,6 +233,10 @@ export const usePiezometroData = () => {
             });
 
             const labels = dados.map((item: any) => {
+                if (porDia) {
+                    const [ano, mes, dia] = item.mes_ano.split("-");
+                    return `${dia}/${mes}/${ano}`;
+                }
                 const [ano, mes] = item.mes_ano.split("-");
                 return new Date(Number(ano), Number(mes) - 1).toLocaleDateString("pt-BR", {
                     month: "short",

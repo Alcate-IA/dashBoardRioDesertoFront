@@ -183,6 +183,10 @@ export default function GraficoPiezometro() {
         field="mes_ano"
         header="DATA"
         body={(rowData) => {
+          if (filters.porDia) {
+            const [ano, mes, dia] = rowData.mes_ano.split("-");
+            return `${dia}/${mes}/${ano}`;
+          }
           const [ano, mes] = rowData.mes_ano.split("-");
           return `${mes}/${ano}`;
         }}
@@ -314,16 +318,16 @@ export default function GraficoPiezometro() {
 
           // Verifica se é uma linha tracejada (Início da Escavação ou outras)
           const isTracejada = dataset.borderDash && dataset.borderDash.length > 0;
-          
+
           // Verifica se o dataset está oculto
           const isHidden = chart ? chart.getDatasetMeta(index).hidden : false;
 
           return (
-            <div 
-              key={dataset.label} 
+            <div
+              key={dataset.label}
               className="legend-item"
               onClick={() => handleLegendClick(index)}
-              style={{ 
+              style={{
                 cursor: 'pointer',
                 opacity: isHidden ? 0.5 : 1,
                 textDecoration: isHidden ? 'line-through' : 'none'
@@ -332,7 +336,7 @@ export default function GraficoPiezometro() {
               {isTracejada ? (
                 <div
                   className="legend-line-dashed"
-                  style={{ 
+                  style={{
                     width: '20px',
                     height: '2px',
                     background: `repeating-linear-gradient(90deg, ${dataset.borderColor} 0px, ${dataset.borderColor} 4px, transparent 4px, transparent 8px)`,
@@ -397,6 +401,8 @@ export default function GraficoPiezometro() {
         dataFim={filters.dataFim}
         onDataInicioChange={(value) => updateFilters({ dataInicio: value })}
         onDataFimChange={(value) => updateFilters({ dataFim: value })}
+        porDia={filters.porDia}
+        onPorDiaChange={(value) => updateFilters({ porDia: value })}
         onBuscar={buscarGrafico}
       />
 
