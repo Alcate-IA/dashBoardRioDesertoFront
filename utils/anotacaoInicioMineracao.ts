@@ -7,17 +7,17 @@
  */
 
 // Data fixa do início da mineração: Outubro de 2012
-export const DATA_INICIO_MINERACAO = new Date(2012, 9, 1); // Mês é 0-indexed, então 9 = outubro
-export const LABEL_INICIO_MINERACAO = "out. 2012"; // Formato usado nos labels do gráfico
+export const DATA_INICIO_MINERACAO = new Date(2008, 10, 1); // Mês é 0-indexed, então 9 = outubro
+export const LABEL_INICIO_MINERACAO = "out. 2008"; // Formato usado nos labels do gráfico
 
 /**
  * Verifica se o intervalo de datas selecionado inclui outubro de 2012
  */
 export function intervaloIncluiInicioMineracao(dataInicio: Date | null, dataFim: Date | null): boolean {
     if (!dataInicio || !dataFim) return false;
-    
+
     const inicioMineracao = DATA_INICIO_MINERACAO;
-    
+
     return dataInicio <= inicioMineracao && dataFim >= inicioMineracao;
 }
 
@@ -31,9 +31,9 @@ export function encontrarIndiceLabelMineracao(labels: string[]): number {
         "outubro 2012",
         "10/2012"
     ];
-    
-    return labels.findIndex(label => 
-        possiveisLabels.some(possivel => 
+
+    return labels.findIndex(label =>
+        possiveisLabels.some(possivel =>
             label.toLowerCase().includes(possivel.toLowerCase()) ||
             label.toLowerCase() === possivel.toLowerCase()
         )
@@ -49,17 +49,17 @@ export function getDatasetInicioMineracao(labels: string[], dataInicio: Date | n
     if (!intervaloIncluiInicioMineracao(dataInicio, dataFim)) {
         return null;
     }
-    
+
     // Encontra o índice do label correspondente a outubro de 2012
     const indiceMineracao = encontrarIndiceLabelMineracao(labels);
-    
+
     if (indiceMineracao === -1) {
         return null;
     }
-    
+
     // Cria array de dados com null em todos os pontos
     const data = new Array(labels.length).fill(null);
-    
+
     return {
         label: "Início da Escavação",
         data: data,

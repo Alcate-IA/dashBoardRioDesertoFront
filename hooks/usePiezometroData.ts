@@ -9,7 +9,7 @@ import {
     getColetaPorIdDataInicioDataFimApi,
     getAnaliseQuimicaPorRegistro,
 } from "@/service/api";
-import { getPiezometroFiltroComHistoricoApi, webHookIAAnaliseNivelEstatico } from "@/service/nivelEstaticoApis";
+import { getPiezometroFiltroComHistoricoApi, getPiezometroDiarioApi, webHookIAAnaliseNivelEstatico } from "@/service/nivelEstaticoApis";
 import { formatarData } from "@/utils/formatarData";
 import { getDatasetInicioMineracao } from "@/utils/anotacaoInicioMineracao";
 
@@ -205,11 +205,11 @@ export const usePiezometroData = () => {
             setAnaliseIANivelEstatico(null);
             setAnaliseOriginalIA(null);
 
-            const resposta = await getPiezometroFiltroComHistoricoApi(
-                idSelecionado,
-                inicioFormatado,
-                fimFormatado
-            );
+            const apiCall = porDia
+                ? getPiezometroDiarioApi(idSelecionado, inicioFormatado, fimFormatado)
+                : getPiezometroFiltroComHistoricoApi(idSelecionado, inicioFormatado, fimFormatado);
+
+            const resposta = await apiCall;
 
             const dadosFiltrados = resposta.data.dadosFiltrados || [];
             const historicoCompleto = resposta.data.historicoCompleto || [];
