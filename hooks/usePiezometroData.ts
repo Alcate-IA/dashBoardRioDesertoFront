@@ -11,6 +11,7 @@ import {
 } from "@/service/api";
 import { getPiezometroFiltroComHistoricoApi, webHookIAAnaliseNivelEstatico } from "@/service/nivelEstaticoApis";
 import { formatarData } from "@/utils/formatarData";
+import { getDatasetInicioMineracao } from "@/utils/anotacaoInicioMineracao";
 
 interface PiezometroOption {
     label: string;
@@ -351,6 +352,12 @@ export const usePiezometroData = () => {
                 ];
             }
 
+            // Adiciona o dataset de início da escavação se o intervalo incluir 10/2012
+            const datasetMineracao = getDatasetInicioMineracao(labels, dataInicio, dataFim);
+            if (datasetMineracao) {
+                datasets.push(datasetMineracao as any);
+            }
+
             setLineData({
                 labels,
                 datasets
@@ -411,7 +418,7 @@ export const usePiezometroData = () => {
                 yAxisConfig.suggestedMin = 0;
                 yAxisConfig.min = 0;
 
-                setLineOptions({
+                const optionsBase = {
                     maintainAspectRatio: false,
                     aspectRatio: 0.6,
                     plugins: {
@@ -448,7 +455,8 @@ export const usePiezometroData = () => {
                             }
                         }
                     }
-                });
+                };
+                setLineOptions(optionsBase);
             } else if (tipoPiezometro === 'PR') {
                 yAxisConfig.title = {
                     display: true,
@@ -456,7 +464,7 @@ export const usePiezometroData = () => {
                     color: '#ccc'
                 };
 
-                setLineOptions({
+                const optionsBase = {
                     maintainAspectRatio: false,
                     aspectRatio: 0.6,
                     plugins: {
@@ -493,7 +501,8 @@ export const usePiezometroData = () => {
                             }
                         }
                     }
-                });
+                };
+                setLineOptions(optionsBase);
             } else if (tipoPiezometro === 'PP') {
                 yAxisConfig.title = {
                     display: true,
@@ -501,7 +510,7 @@ export const usePiezometroData = () => {
                     color: '#ccc'
                 };
 
-                setLineOptions({
+                const optionsBase = {
                     maintainAspectRatio: false,
                     aspectRatio: 0.6,
                     plugins: {
@@ -538,7 +547,8 @@ export const usePiezometroData = () => {
                             }
                         }
                     }
-                });
+                };
+                setLineOptions(optionsBase);
             }
 
             Swal.close();

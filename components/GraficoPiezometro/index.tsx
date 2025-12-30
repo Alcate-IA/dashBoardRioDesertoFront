@@ -1,7 +1,7 @@
 //CORPO PRINCIPAL DO COMPONENTE DE GRÁFICO PIEZÔMETRO
 
 "use client";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Chart } from "primereact/chart";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -16,6 +16,7 @@ import Swal from "sweetalert2";
 
 export default function GraficoPiezometro() {
   const chartRef = useRef<Chart>(null);
+  const [legendUpdate, setLegendUpdate] = useState(0); // Força re-render da legenda
   const {
     filters,
     piezometros,
@@ -284,25 +285,66 @@ export default function GraficoPiezometro() {
     return colunas;
   };
 
+  // Handler de clique na legenda para esconder/mostrar datasets
+  const handleLegendClick = (datasetIndex: number) => {
+    const chart = chartRef.current?.getChart();
+    if (!chart) return;
+
+    const meta = chart.getDatasetMeta(datasetIndex);
+    meta.hidden = meta.hidden === null ? true : !meta.hidden;
+
+    chart.update();
+    setLegendUpdate(prev => prev + 1); // Força re-render da legenda
+  };
+
   // Renderizar legenda do gráfico
   const renderizarLegendaGrafico = () => {
     if (!lineData) return null;
 
+    const chart = chartRef.current?.getChart();
+
     return (
       <div className="chart-legend">
-        {lineData.datasets.map((dataset: any) => {
+        {lineData.datasets.map((dataset: any, index: number) => {
           const label =
             dataset.label === "Cota Superfície" &&
               filters.tipoSelecionado === "PR"
               ? "Cota"
               : dataset.label;
 
+          // Verifica se é uma linha tracejada (Início da Escavação ou outras)
+          const isTracejada = dataset.borderDash && dataset.borderDash.length > 0;
+          
+          // Verifica se o dataset está oculto
+          const isHidden = chart ? chart.getDatasetMeta(index).hidden : false;
+
           return (
-            <div key={dataset.label} className="legend-item">
-              <div
-                className="legend-color"
-                style={{ backgroundColor: dataset.borderColor }}
-              ></div>
+            <div 
+              key={dataset.label} 
+              className="legend-item"
+              onClick={() => handleLegendClick(index)}
+              style={{ 
+                cursor: 'pointer',
+                opacity: isHidden ? 0.5 : 1,
+                textDecoration: isHidden ? 'line-through' : 'none'
+              }}
+            >
+              {isTracejada ? (
+                <div
+                  className="legend-line-dashed"
+                  style={{ 
+                    width: '20px',
+                    height: '2px',
+                    background: `repeating-linear-gradient(90deg, ${dataset.borderColor} 0px, ${dataset.borderColor} 4px, transparent 4px, transparent 8px)`,
+                    marginRight: '6px'
+                  }}
+                ></div>
+              ) : (
+                <div
+                  className="legend-color"
+                  style={{ backgroundColor: dataset.borderColor }}
+                ></div>
+              )}
               {label}
             </div>
           );

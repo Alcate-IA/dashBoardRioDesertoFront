@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Chart } from 'primereact/chart';
 import { Carousel } from 'primereact/carousel';
+import { DATA_INICIO_MINERACAO } from '@/utils/anotacaoInicioMineracao';
 
 interface AnaliseLegislacao {
     simbolo: string;
@@ -93,6 +94,43 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
         return `${dia}/${mes}/${ano}`;
     };
 
+    // Função para verificar se a data está próxima de outubro de 2012
+    const verificarDataProximaInicioMineracao = (dataStr: string): boolean => {
+        if (!dataStr) return false;
+        const [ano, mes] = dataStr.split('-');
+        return parseInt(ano) === 2012 && parseInt(mes) === 10;
+    };
+
+    // Função para obter informações sobre a linha de início da mineração
+    const obterInfoInicioMineracao = (datasOriginais: string[]): { mostrar: boolean, indice: number } => {
+        // Verifica se alguma data está em outubro de 2012
+        const indiceMineracao = datasOriginais.findIndex(d => verificarDataProximaInicioMineracao(d));
+        
+        if (indiceMineracao !== -1) {
+            return { mostrar: true, indice: indiceMineracao };
+        }
+        
+        // Se não encontrou data exata, verifica se o intervalo inclui outubro de 2012
+        if (datasOriginais.length < 2) return { mostrar: false, indice: -1 };
+        
+        const primeiraData = new Date(datasOriginais[0]);
+        const ultimaData = new Date(datasOriginais[datasOriginais.length - 1]);
+        
+        if (primeiraData <= DATA_INICIO_MINERACAO && ultimaData >= DATA_INICIO_MINERACAO) {
+            // Encontra a posição aproximada
+            for (let i = 0; i < datasOriginais.length - 1; i++) {
+                const dataAtual = new Date(datasOriginais[i]);
+                const proximaData = new Date(datasOriginais[i + 1]);
+                
+                if (dataAtual <= DATA_INICIO_MINERACAO && proximaData >= DATA_INICIO_MINERACAO) {
+                    return { mostrar: true, indice: i };
+                }
+            }
+        }
+        
+        return { mostrar: false, indice: -1 };
+    };
+
     const { charts, missingAnalyses } = useMemo(() => {
         if (!dados || !dados.amostras || dados.amostras.length === 0) return { charts: [], missingAnalyses: [] };
 
@@ -113,7 +151,11 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
         const amostrasOrdenadas = [...dados.amostras].sort((a: any, b: any) => {
             return new Date(a.informacoesAmostra.data).getTime() - new Date(b.informacoesAmostra.data).getTime();
         });
+        const datasOriginais = amostrasOrdenadas.map((a: any) => a.informacoesAmostra.data);
         const datas = amostrasOrdenadas.map((a: any) => formatarData(a.informacoesAmostra.data));
+        
+        // Obter informações sobre início da mineração
+        const infoMineracao = obterInfoInicioMineracao(datasOriginais);
 
         // 3. Identificar todos os símbolos e nomes de análise únicos presentes nas amostras
         const simbolosAmostrasMap = new Map<string, { simbolo: string, nome_analise: string }>();
@@ -189,6 +231,79 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
             const titulo = legParam ? legParam.nome_analise : amostraInfo.nome_analise;
             const subtitle = legParam ? `Parâmetro: ${legParam.parametro}` : 'Sem limite na legislação';
 
+            const optionsBase: any = {
+                maintainAspectRatio: false,
+                aspectRatio: 0.8,
+                plugins: {
+                    legend: {
+                        display: true,
+                        onClick: (evt: any, legendItem: any, legend: any) => {
+                            const chart = legend.chart;
+                            const datasetIndex = legendItem.datasetIndex;
+                            
+                            // Toggle visibilidade do dataset
+                            const meta = chart.getDatasetMeta(datasetIndex);
+                            meta.hidden = meta.hidden === null ? true : !meta.hidden;
+                            
+                            chart.update();
+                        },
+                        labels: {
+                            filter: function (item: any, chart: any) {
+                                return true;
+                            },
+                            // Customiza o estilo da legenda para mostrar linha tracejada
+                            usePointStyle: false,
+                            generateLabels: function(chart: any) {
+                                const datasets = chart.data.datasets;
+                                return datasets.map((dataset: any, i: number) => {
+                                    const meta = chart.getDatasetMeta(i);
+                                    return {
+                                        text: dataset.label,
+                                        fillStyle: dataset._isLinhaVertical ? 'transparent' : dataset.backgroundColor,
+                                        strokeStyle: dataset.borderColor,
+                                        lineWidth: dataset.borderWidth || 2,
+                                        lineDash: dataset.borderDash || [],
+                                        hidden: meta.hidden,
+                                        datasetIndex: i
+                                    };
+                                });
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#aaa' },
+                        grid: { color: '#333', drawBorder: false }
+                    },
+                    y: {
+                        ticks: { color: '#aaa' },
+                        grid: { color: '#333', drawBorder: false }
+                    }
+                }
+            };
+
+            // Adicionar dataset de início da mineração se aplicável
+            if (infoMineracao.mostrar) {
+                datasets.push({
+                    label: 'Início da Escavação',
+                    data: new Array(datas.length).fill(null),
+                    borderColor: '#ff4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [6, 4],
+                    pointRadius: 0,
+                    fill: false,
+                    showLine: false,
+                    _indiceMineracao: infoMineracao.indice,
+                    _isLinhaVertical: true
+                } as any);
+            }
+
             listaGraficos.push({
                 titulo: titulo,
                 subtitle: subtitle,
@@ -197,35 +312,7 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
                     labels: datas,
                     datasets: datasets
                 },
-                options: {
-                    maintainAspectRatio: false,
-                    aspectRatio: 0.8,
-                    plugins: {
-                        legend: {
-                            display: true, // Mostrar legenda para ver o que é linha de limite
-                            labels: {
-                                filter: function (item: any, chart: any) {
-                                    // Hack para nao poluir a legenda se não quiser
-                                    return true;
-                                }
-                            }
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: '#aaa' },
-                            grid: { color: '#333', drawBorder: false }
-                        },
-                        y: {
-                            ticks: { color: '#aaa' },
-                            grid: { color: '#333', drawBorder: false }
-                        }
-                    }
-                }
+                options: optionsBase
             });
 
             // Remove do mapa de legislação para sabermos o que sobrou
