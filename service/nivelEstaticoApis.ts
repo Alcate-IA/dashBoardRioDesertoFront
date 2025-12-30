@@ -1,9 +1,10 @@
 import axios from "axios";
 
+const API_BASE_URL = process.env.API_BASE_URL;
+
 export const rota = axios.create({
-    baseURL: "http://192.168.100.95:8080",
-    // baseURL: "http://localhost:8080",
-    timeout: 400000,
+    baseURL: API_BASE_URL,
+    timeout: 400000
 });
 
 export const salvarAvaliacaoIA = async (dados: {
