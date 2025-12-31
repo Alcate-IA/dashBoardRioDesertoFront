@@ -262,17 +262,29 @@ export const usePiezometroData = () => {
 
             const resposta = await apiCall;
 
-            let dadosFiltrados = resposta.data.dadosFiltrados || [];
+            const rawDadosFiltrados = resposta.data.dadosFiltrados || [];
             const historicoCompleto = resposta.data.historicoCompleto || [];
 
+            let dadosFiltrados = rawDadosFiltrados;
+
             if (porDia) {
-                dadosFiltrados = transformarDadosDiarios(dadosFiltrados);
+                dadosFiltrados = transformarDadosDiarios(rawDadosFiltrados);
             }
 
-            if (dadosFiltrados.length > 0) {
-                const iaResponse = await webHookIAAnaliseNivelEstatico(dadosFiltrados, idSelecionado, historicoCompleto);
-                setAnaliseIANivelEstatico(iaResponse[0].output);
-                setAnaliseOriginalIA(iaResponse[0].output);
+            // Para a IA, mandamos o raw se for porDia, ou o array se for mensal
+            const dadosParaIA = porDia ? rawDadosFiltrados : dadosFiltrados;
+
+            // Verificação se tem dados para a IA (nivel_estatico no caso diário, ou tamanho do array no mensal)
+            const temDadosIA = porDia
+                ? (rawDadosFiltrados.nivel_estatico && rawDadosFiltrados.nivel_estatico.length > 0)
+                : (dadosFiltrados && dadosFiltrados.length > 0);
+
+            if (temDadosIA) {
+                const iaResponse = await webHookIAAnaliseNivelEstatico(dadosParaIA, idSelecionado, historicoCompleto);
+                if (iaResponse && iaResponse[0]) {
+                    setAnaliseIANivelEstatico(iaResponse[0].output);
+                    setAnaliseOriginalIA(iaResponse[0].output);
+                }
             }
 
             const respostaColeta = await getColetaPorIdDataInicioDataFimApi(
