@@ -5,6 +5,7 @@
 import { Calendar } from "primereact/calendar";
 import { Dropdown } from "primereact/dropdown";
 import { Button } from "primereact/button";
+import { Checkbox } from "primereact/checkbox";
 
 interface FilterBarProps {
   opcoesFiltro: any;
@@ -20,6 +21,9 @@ interface FilterBarProps {
   dataFim: Date | null;
   onDataInicioChange: (value: Date | null) => void;
   onDataFimChange: (value: Date | null) => void;
+
+  porDia: boolean;
+  onPorDiaChange: (value: boolean) => void;
 
   onBuscar: () => void;
 }
@@ -39,6 +43,9 @@ export default function FilterBar(
     dataFim,
     onDataInicioChange,
     onDataFimChange,
+
+    porDia,
+    onPorDiaChange,
 
     onBuscar,
   }: FilterBarProps
@@ -69,18 +76,16 @@ export default function FilterBar(
           showClear
           disabled={carregando}
           panelClassName="dropdown-panel-mobile"
-          appendTo="self"
         />
       </div>
-
       <div className="filter-item">
         <span className="filter-label">Período</span>
         <div className="flex gap-2">
           <Calendar
             value={dataInicio}
             onChange={(e: any) => onDataInicioChange(e.value)}
-            dateFormat="mm/yy"
-            view="month"
+            dateFormat={porDia ? "dd/mm/yy" : "mm/yy"}
+            view={porDia ? "date" : "month"}
             placeholder="Início"
             showIcon
             panelClassName="calendar-panel-fixed"
@@ -88,15 +93,26 @@ export default function FilterBar(
           />
           <Calendar
             value={dataFim}
-            onChange={(e:any) => onDataFimChange(e.value)}
-            dateFormat="mm/yy"
-            view="month"
+            onChange={(e: any) => onDataFimChange(e.value)}
+            dateFormat={porDia ? "dd/mm/yy" : "mm/yy"}
+            view={porDia ? "date" : "month"}
             placeholder="Fim"
             showIcon
             panelClassName="calendar-panel-fixed"
             appendTo="self"
           />
         </div>
+      </div>
+
+      <div className="filter-item" style={{ flexDirection: 'row', alignItems: 'center', paddingTop: '1.25rem' }}>
+        <Checkbox
+          inputId="porDia"
+          checked={porDia}
+          onChange={(e) => onPorDiaChange(e.checked || false)}
+        />
+        <label htmlFor="porDia" className="ml-2 cursor-pointer font-bold" style={{ color: '#ccc' }}>
+          Por dia
+        </label>
       </div>
 
       <div className="ml-auto">

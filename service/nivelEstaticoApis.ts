@@ -1,11 +1,10 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.API_BASE_URL;
-
 export const rota = axios.create({
-    baseURL: API_BASE_URL,
-    timeout: 400000
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    timeout: 1000000,
 });
+
 
 export const salvarAvaliacaoIA = async (dados: {
     cdPiezometro: number;
@@ -23,6 +22,15 @@ export const getPiezometroFiltroComHistoricoApi = (cdPiezometro: number | string
         params: {
             mesAnoInicio: inicio,
             mesAnoFim: fim
+        }
+    });
+};
+
+export const getPiezometroDiarioApi = (cdPiezometro: number | string | null, inicio: string, fim: string) => {
+    return rota.get(`/relatorio-nivel-estatico/piezometro/${cdPiezometro}/diario`, {
+        params: {
+            dataInicio: inicio,
+            dataFim: fim
         }
     });
 };

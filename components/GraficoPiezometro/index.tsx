@@ -5,7 +5,6 @@ import { useRef, useState } from "react";
 import { Chart } from "primereact/chart";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import ColetaTable from "./ColetaTable";
 import AnaliseIA from "./AnaliseIA";
 import { SplitButton } from 'primereact/splitbutton';
 
@@ -30,16 +29,6 @@ export default function GraficoPiezometro() {
     updateFilters,
     handleSelecionarPiezometro,
     buscarGrafico,
-
-    // relacionados as dados das coletas
-    coletaDados,
-    expandedRows,
-    setExpandedRows,
-
-    //relacionados as analises quimicas dentro de coletas
-    analisesQuimicas,
-    carregandoAnalise,
-    buscarAnaliseQuimica,
 
     // relacionados a analise ia nivel estatico
     analiseIANivelEstatico,
@@ -183,6 +172,10 @@ export default function GraficoPiezometro() {
         field="mes_ano"
         header="DATA"
         body={(rowData) => {
+          if (filters.porDia) {
+            const [ano, mes, dia] = rowData.mes_ano.split("-");
+            return `${dia}/${mes}/${ano}`;
+          }
           const [ano, mes] = rowData.mes_ano.split("-");
           return `${mes}/${ano}`;
         }}
@@ -314,16 +307,16 @@ export default function GraficoPiezometro() {
 
           // Verifica se é uma linha tracejada (Início da Escavação ou outras)
           const isTracejada = dataset.borderDash && dataset.borderDash.length > 0;
-          
+
           // Verifica se o dataset está oculto
           const isHidden = chart ? chart.getDatasetMeta(index).hidden : false;
 
           return (
-            <div 
-              key={dataset.label} 
+            <div
+              key={dataset.label}
               className="legend-item"
               onClick={() => handleLegendClick(index)}
-              style={{ 
+              style={{
                 cursor: 'pointer',
                 opacity: isHidden ? 0.5 : 1,
                 textDecoration: isHidden ? 'line-through' : 'none'
@@ -332,7 +325,7 @@ export default function GraficoPiezometro() {
               {isTracejada ? (
                 <div
                   className="legend-line-dashed"
-                  style={{ 
+                  style={{
                     width: '20px',
                     height: '2px',
                     background: `repeating-linear-gradient(90deg, ${dataset.borderColor} 0px, ${dataset.borderColor} 4px, transparent 4px, transparent 8px)`,
@@ -397,6 +390,8 @@ export default function GraficoPiezometro() {
         dataFim={filters.dataFim}
         onDataInicioChange={(value) => updateFilters({ dataInicio: value })}
         onDataFimChange={(value) => updateFilters({ dataFim: value })}
+        porDia={filters.porDia}
+        onPorDiaChange={(value) => updateFilters({ porDia: value })}
         onBuscar={buscarGrafico}
       />
 
@@ -462,20 +457,6 @@ export default function GraficoPiezometro() {
         </div>
       )}
 
-      {/* TABELA DE COLETA */}
-
-      {coletaDados && coletaDados.length > 0 && (
-        <div className="avoid-break">
-          <ColetaTable
-            data={coletaDados}
-            expandedRows={expandedRows}
-            onRowToggle={(e) => setExpandedRows(e.data)}
-            analisesQuimicas={analisesQuimicas}
-            carregandoAnalise={carregandoAnalise}
-            buscarAnaliseQuimica={buscarAnaliseQuimica}
-          />
-        </div>
-      )}
     </div>
   );
 }
