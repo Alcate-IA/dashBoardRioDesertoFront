@@ -51,7 +51,8 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
         if (!parametro) return {};
 
         let p = parametro.toLowerCase().trim();
-        // Remover unidades comuns para facilitar o parse
+
+        //REMOVENDO A UNIDADE PARA FACILITAR TALVEZ MUDAR ESSA ABORDAGEM PARA MOSTRAR O VALOR A UNIDADE JUNTO
         p = p.replace('mg/l', '').replace('ausentes em 100 ml', '0').trim();
 
         const extractNumber = (str: string) => {
@@ -85,6 +86,11 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
             }
         }
 
+        const val = extractNumber(p);
+        if (val !== null) {
+            return { max: val };
+        }
+
         return {};
     };
 
@@ -105,46 +111,58 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
     const obterInfoInicioMineracao = (datasOriginais: string[]): { mostrar: boolean, indice: number } => {
         // Verifica se alguma data está em outubro de 2012
         const indiceMineracao = datasOriginais.findIndex(d => verificarDataProximaInicioMineracao(d));
-        
+
         if (indiceMineracao !== -1) {
             return { mostrar: true, indice: indiceMineracao };
         }
-        
+
         // Se não encontrou data exata, verifica se o intervalo inclui outubro de 2012
         if (datasOriginais.length < 2) return { mostrar: false, indice: -1 };
-        
+
         const primeiraData = new Date(datasOriginais[0]);
         const ultimaData = new Date(datasOriginais[datasOriginais.length - 1]);
-        
+
         if (primeiraData <= DATA_INICIO_MINERACAO && ultimaData >= DATA_INICIO_MINERACAO) {
             // Encontra a posição aproximada
             for (let i = 0; i < datasOriginais.length - 1; i++) {
                 const dataAtual = new Date(datasOriginais[i]);
                 const proximaData = new Date(datasOriginais[i + 1]);
-                
+
                 if (dataAtual <= DATA_INICIO_MINERACAO && proximaData >= DATA_INICIO_MINERACAO) {
                     return { mostrar: true, indice: i };
                 }
             }
         }
-        
+
         return { mostrar: false, indice: -1 };
     };
 
     const { charts, missingAnalyses } = useMemo(() => {
         if (!dados || !dados.amostras || dados.amostras.length === 0) return { charts: [], missingAnalyses: [] };
 
-        // 1. Processar Legislação (Indexado pelo símbolo normalizado)
-        let paramsLegislacao: Map<string, AnaliseLegislacao> = new Map();
+        // 1. Processar Legislações (Indexado pelo símbolo normalizado)
+        // Agora armazenamos uma lista de { legislationName, param } para cada símbolo
+        let paramsLegislacao: Map<string, Array<{ legislationName: string, param: AnaliseLegislacao }>> = new Map();
+
+        // Prepara cores distintas para legislações
+        const legislationColors: { [key: string]: string } = {};
+        const colors = ['#FF5252', '#9C27B0', '#009688', '#3F51B5', '#E91E63'];
+
         if (dados.legislacoes) {
-            // Pega a primeira legislação disponível
-            const keys = Object.keys(dados.legislacoes);
-            if (keys.length > 0) {
-                const leg = dados.legislacoes[keys[0]];
+            let colorIdx = 0;
+            Object.keys(dados.legislacoes).forEach(nomeLegislacao => {
+                legislationColors[nomeLegislacao] = colors[colorIdx % colors.length];
+                colorIdx++;
+
+                const leg = dados.legislacoes![nomeLegislacao];
                 leg.parametros_legislacao.forEach(p => {
-                    paramsLegislacao.set(normalizeSymbol(p.simbolo), p);
+                    const norm = normalizeSymbol(p.simbolo);
+                    if (!paramsLegislacao.has(norm)) {
+                        paramsLegislacao.set(norm, []);
+                    }
+                    paramsLegislacao.get(norm)?.push({ legislationName: nomeLegislacao, param: p });
                 });
-            }
+            });
         }
 
         // 2. Ordenar Amostras
@@ -153,7 +171,7 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
         });
         const datasOriginais = amostrasOrdenadas.map((a: any) => a.informacoesAmostra.data);
         const datas = amostrasOrdenadas.map((a: any) => formatarData(a.informacoesAmostra.data));
-        
+
         // Obter informações sobre início da mineração
         const infoMineracao = obterInfoInicioMineracao(datasOriginais);
 
@@ -172,11 +190,13 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
         });
 
         const listaGraficos: any[] = [];
-        const listaFaltantes: AnaliseLegislacao[] = [];
+
+        // Estrutura para faltantes agora precisa considerar a legislação: { legislationName, param }
+        const listaFaltantes: Array<{ legislationName: string, param: AnaliseLegislacao }> = [];
 
         // 4. Cruzar dados
         simbolosAmostrasMap.forEach((amostraInfo, normalizedSymbol) => {
-            const legParam = paramsLegislacao.get(normalizedSymbol);
+            const legParamsList = paramsLegislacao.get(normalizedSymbol) || [];
 
             // Dados da amostra (buscando pelo símbolo normalizado)
             const dataValues = amostrasOrdenadas.map((amostra: any) => {
@@ -184,12 +204,10 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
                 return analiseEncontrada ? parseValor(analiseEncontrada.resultado) : null;
             });
 
-            // Limites da legislação
-            const limits = legParam ? parseLegislativeLimit(legParam.parametro) : {};
-
+            // Dataset principal com os dados da amostra
             const datasets = [
                 {
-                    label: legParam ? legParam.simbolo : amostraInfo.simbolo, // Prefere o símbolo da legislação se houver
+                    label: amostraInfo.simbolo,
                     data: dataValues,
                     fill: false,
                     borderColor: '#FFC107',
@@ -199,37 +217,56 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
                 }
             ];
 
-            if (limits.max !== undefined) {
-                datasets.push({
-                    label: `Máximo (${legParam?.nome_analise || 'Legislação'})`, // Hack para legenda
-                    data: new Array(datas.length).fill(limits.max),
-                    fill: false,
-                    borderColor: '#FF5252', // Vermelho para limite
-                    backgroundColor: '#FF5252',
-                    tension: 0,
-                    pointRadius: 0, // Linha reta sem pontos
-                    borderDash: [5, 5], // Tracejado
-                    borderWidth: 2
-                } as any);
-            }
+            // Adicionar limites para CADA legislação que tenha esse parâmetro
+            legParamsList.forEach(({ legislationName, param }, index) => {
+                const limits = parseLegislativeLimit(param.parametro);
 
-            if (limits.min !== undefined) {
-                datasets.push({
-                    label: `Mínimo (${legParam?.nome_analise || 'Legislação'})`,
-                    data: new Array(datas.length).fill(limits.min),
-                    fill: false,
-                    borderColor: '#FF5252',
-                    backgroundColor: '#FF5252',
-                    tension: 0,
-                    pointRadius: 0,
-                    borderDash: [5, 5],
-                    borderWidth: 2
-                } as any);
-            }
+                // Usar cor específica da legislação
+                const limitColor = legislationColors[legislationName] || '#FF5252';
 
-            // Título do gráfico
-            const titulo = legParam ? legParam.nome_analise : amostraInfo.nome_analise;
-            const subtitle = legParam ? `Parâmetro: ${legParam.parametro}` : 'Sem limite na legislação';
+                // Offset do tracejado para evitar sobreposição exata quando os valores são iguais
+                // Se o dash é [5, 5], um offset de 5 inverte o padrão (espaço onde era linha)
+                const dashOffset = index * 5;
+
+                if (limits.max !== undefined) {
+                    datasets.push({
+                        label: `Máx (${legislationName.substring(0, 15)}...)`, // Encurtar nome se muito longo
+                        data: new Array(datas.length).fill(limits.max),
+                        fill: false,
+                        borderColor: limitColor,
+                        backgroundColor: limitColor,
+                        tension: 0,
+                        pointRadius: 0,
+                        borderDash: [5, 5],
+                        borderDashOffset: dashOffset,
+                        borderWidth: 2
+                    } as any);
+                }
+
+                if (limits.min !== undefined) {
+                    datasets.push({
+                        label: `Mín (${legislationName.substring(0, 15)}...)`,
+                        data: new Array(datas.length).fill(limits.min),
+                        fill: false,
+                        borderColor: limitColor,
+                        backgroundColor: limitColor,
+                        tension: 0,
+                        pointRadius: 0,
+                        borderDash: [5, 5],
+                        borderDashOffset: dashOffset,
+                        borderWidth: 2
+                    } as any);
+                }
+            });
+
+            // Título do gráfico: usa o nome da análise da amostra ou da primeira legislação encontrada
+            const primeiroLegParam = legParamsList.length > 0 ? legParamsList[0].param : null;
+            const titulo = primeiroLegParam ? primeiroLegParam.nome_analise : amostraInfo.nome_analise;
+
+            // Subtítulo: lista os parâmetros de todas as legislações aplicáveis
+            const subtitle = legParamsList.length > 0
+                ? legParamsList.map(item => `${item.legislationName}: ${item.param.parametro}`).join(' | ')
+                : 'Sem limite na legislação';
 
             const optionsBase: any = {
                 maintainAspectRatio: false,
@@ -240,20 +277,16 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
                         onClick: (evt: any, legendItem: any, legend: any) => {
                             const chart = legend.chart;
                             const datasetIndex = legendItem.datasetIndex;
-                            
-                            // Toggle visibilidade do dataset
                             const meta = chart.getDatasetMeta(datasetIndex);
                             meta.hidden = meta.hidden === null ? true : !meta.hidden;
-                            
                             chart.update();
                         },
                         labels: {
                             filter: function (item: any, chart: any) {
                                 return true;
                             },
-                            // Customiza o estilo da legenda para mostrar linha tracejada
                             usePointStyle: false,
-                            generateLabels: function(chart: any) {
+                            generateLabels: function (chart: any) {
                                 const datasets = chart.data.datasets;
                                 return datasets.map((dataset: any, i: number) => {
                                     const meta = chart.getDatasetMeta(i);
@@ -307,7 +340,7 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
             listaGraficos.push({
                 titulo: titulo,
                 subtitle: subtitle,
-                hasLegislation: !!legParam,
+                hasLegislation: legParamsList.length > 0,
                 chartData: {
                     labels: datas,
                     datasets: datasets
@@ -315,15 +348,17 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
                 options: optionsBase
             });
 
-            // Remove do mapa de legislação para sabermos o que sobrou
-            if (legParam) {
+            // Remover do mapa de legislação os que foram encontrados nas amostras
+            if (legParamsList.length > 0) {
                 paramsLegislacao.delete(normalizedSymbol);
             }
         });
 
         // B. O que sobrou na legislação e não está nas amostras
-        paramsLegislacao.forEach((value, key) => {
-            listaFaltantes.push(value);
+        paramsLegislacao.forEach((list, key) => {
+            list.forEach(item => {
+                listaFaltantes.push(item);
+            });
         });
 
         return { charts: listaGraficos, missingAnalyses: listaFaltantes };
@@ -404,8 +439,10 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
                     <div className="flex flex-wrap gap-2">
                         {missingAnalyses.map((item, i) => (
                             <span key={i} className="inline-flex align-items-center px-3 py-1 border-round bg-orange-100 text-orange-800 text-sm font-semibold border-1 border-orange-200">
-                                {item.nome_analise} ({item.simbolo})
-                                <span className="ml-2 text-xs opacity-70 border-left-1 border-orange-300 pl-2 ">{item.parametro}</span>
+                                {item.param.nome_analise} ({item.param.simbolo})
+                                <span className="ml-2 text-xs opacity-70 border-left-1 border-orange-300 pl-2 ">
+                                    {item.legislationName}: {item.param.parametro}
+                                </span>
                             </span>
                         ))}
                     </div>
