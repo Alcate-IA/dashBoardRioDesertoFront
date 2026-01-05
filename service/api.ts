@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const rota = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL,
-    timeout: 1000000,
+    timeout: 2000000,
 });
 
 // Busca piezômetros com opção de filtro por tipos (array de strings)
