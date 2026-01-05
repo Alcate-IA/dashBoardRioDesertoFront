@@ -5,12 +5,6 @@ export const rota = axios.create({
     timeout: 2000000,
 });
 
-
-
-export const getAnaliseQuimicaPorRegistro = (nRegistro: number) => {
-    return rota.get(`/relatorios/coleta/analises-quimicas/${nRegistro}`);
-};
-
 export const getHistoricoCompletoApi = (idZeus: number) => {
     return rota.get(`/qualidade-agua/historico-completo/${idZeus}`);
 };

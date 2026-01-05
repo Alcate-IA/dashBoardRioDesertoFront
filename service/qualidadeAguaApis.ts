@@ -34,3 +34,10 @@ export const postColetaCompletaFiltroApi = (idZeus: number, mesAnoInicio: string
         filtros
     });
 };
+
+
+// =============================== DEPRECIADAS: 
+//foi substituida pelo postColetaCompletaFiltroApi, era usada quando não tinham os filtros na tela, como inclui os filtros, optei por um post 
+export const getAnaliseQuimicaPorRegistro = (nRegistro: number) => {
+    return rota.get(`/relatorios/coleta/analises-quimicas/${nRegistro}`);
+};
