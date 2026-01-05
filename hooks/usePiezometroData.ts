@@ -4,10 +4,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Swal from "sweetalert2";
-import {
-    getPiezometrosAtivos,
-} from "@/service/api";
-import { getPiezometroFiltroComHistoricoApi, getPiezometroDiarioApi, webHookIAAnaliseNivelEstatico } from "@/service/nivelEstaticoApis";
+import { getPiezometroFiltroComHistoricoApi, getPiezometroDiarioApi, webHookIAAnaliseNivelEstatico, getPiezometrosAtivos } from "@/service/nivelEstaticoApis";
 import { formatarData } from "@/utils/formatarData";
 import { getDatasetInicioMineracao } from "@/utils/anotacaoInicioMineracao";
 

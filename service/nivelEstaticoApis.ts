@@ -50,3 +50,11 @@ export const webHookIAAnaliseNivelEstatico = async (dto: any, cdPiezometro: numb
         return null;
     }
 };
+
+export const getPiezometrosAtivos = (tipos: any = null) => {
+    const params: any = {};
+    if (tipos && tipos.length > 0) {
+        params.tipos = tipos.join(',');
+    }
+    return rota.get("/piezometros/ativos", { params });
+};

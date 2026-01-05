@@ -5,17 +5,6 @@ export const rota = axios.create({
     timeout: 2000000,
 });
 
-// Busca piezômetros com opção de filtro por tipos (array de strings)
-// Usado em GraficoPiezometro 
-export const getPiezometrosAtivos = (tipos: any = null) => {
-    const params: any = {};
-    if (tipos && tipos.length > 0) {
-        params.tipos = tipos.join(',');
-    }
-    return rota.get("/piezometros/ativos", { params });
-};
-
-
 // Busca piezometros para o relatório de coleta (QualidadeAgua)
 export const getPiezometrosRelatorio = (tipos: string | string[] | null = null) => {
     const params: any = {};

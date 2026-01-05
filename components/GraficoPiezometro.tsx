@@ -12,10 +12,7 @@ import { Column } from "primereact/column";
 
 import Swal from "sweetalert2";
 
-import {
-  getPiezometrosAtivos,
-} from "@/service/api";
-import { getPiezometroFiltroComHistoricoApi } from "@/service/nivelEstaticoApis";
+import { getPiezometroFiltroComHistoricoApi, getPiezometrosAtivos } from "@/service/nivelEstaticoApis";
 import { formatarData } from "@/utils/formatarData";
 
 interface GraficoPiezometroProps {
