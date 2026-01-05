@@ -191,8 +191,6 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
 
         const listaGraficos: any[] = [];
 
-        // Estrutura para faltantes agora precisa considerar a legislação: { legislationName, param }
-        const listaFaltantes: Array<{ legislationName: string, param: AnaliseLegislacao }> = [];
 
         // 4. Cruzar dados
         simbolosAmostrasMap.forEach((amostraInfo, normalizedSymbol) => {
@@ -355,13 +353,21 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
         });
 
         // B. O que sobrou na legislação e não está nas amostras
+        const listaFaltantesGrouped: any[] = [];
         paramsLegislacao.forEach((list, key) => {
-            list.forEach(item => {
-                listaFaltantes.push(item);
-            });
+            if (list.length > 0) {
+                listaFaltantesGrouped.push({
+                    simbolo: list[0].param.simbolo,
+                    nome_analise: list[0].param.nome_analise,
+                    legislacoes: list.map(item => ({
+                        name: item.legislationName,
+                        limit: item.param.parametro
+                    }))
+                });
+            }
         });
 
-        return { charts: listaGraficos, missingAnalyses: listaFaltantes };
+        return { charts: listaGraficos, missingAnalyses: listaFaltantesGrouped };
 
     }, [dados]);
 
@@ -437,11 +443,11 @@ export default function GraficosAnalise({ dados, isReport = false }: Propriedade
                     </div>
                     <p className="text-orange-700 mb-3">Os seguintes parâmetros são exigidos pela legislação mas não foram encontrados nas amostras:</p>
                     <div className="flex flex-wrap gap-2">
-                        {missingAnalyses.map((item, i) => (
+                        {missingAnalyses.map((item: any, i: number) => (
                             <span key={i} className="inline-flex align-items-center px-3 py-1 border-round bg-orange-100 text-orange-800 text-sm font-semibold border-1 border-orange-200">
-                                {item.param.nome_analise} ({item.param.simbolo})
+                                {item.nome_analise} ({item.simbolo})
                                 <span className="ml-2 text-xs opacity-70 border-left-1 border-orange-300 pl-2 ">
-                                    {item.legislationName}: {item.param.parametro}
+                                    {item.legislacoes.map((leg: any) => `${leg.name}: ${leg.limit}`).join(' | ')}
                                 </span>
                             </span>
                         ))}
