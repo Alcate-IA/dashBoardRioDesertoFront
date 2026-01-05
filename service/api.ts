@@ -5,16 +5,6 @@ export const rota = axios.create({
     timeout: 2000000,
 });
 
-// Busca piezometros para o relatório de coleta (QualidadeAgua)
-export const getPiezometrosRelatorio = (tipos: string | string[] | null = null) => {
-    const params: any = {};
-    if (tipos) {
-        params.tipos = Array.isArray(tipos) ? tipos.join(',') : tipos;
-    }
-    return rota.get("/relatorios/piezometros-ativos", { params });
-};
-
-
 // Usado para dados de coleta simples (GraficoPiezometro - Tabela Coleta)
 export const getColetaPorIdDataInicioDataFimApi = (id: number, inicio: string, fim: string) => {
     return rota.get(`/relatorios/coleta/${id}/filtro`, {

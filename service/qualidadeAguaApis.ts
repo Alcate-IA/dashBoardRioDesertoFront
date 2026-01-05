@@ -15,3 +15,12 @@ export const salvarAvaliacaoIAQualidadeAgua = async (dados: {
 }) => {
     return rota.post("/avaliacoes-analise-ia-qualidade-agua", dados);
 };
+
+// Busca piezometros para o relatório de coleta (QualidadeAgua)
+export const getPiezometrosRelatorio = (tipos: string | string[] | null = null) => {
+    const params: any = {};
+    if (tipos) {
+        params.tipos = Array.isArray(tipos) ? tipos.join(',') : tipos;
+    }
+    return rota.get("/relatorios/piezometros-ativos", { params });
+};

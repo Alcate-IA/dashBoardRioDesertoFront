@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import FilterBar from "./FilterBar";
 import GraficosAnalise from "./GraficosAnalise";
 import AnaliseIA from "./AnaliseIA";
-import { getPiezometrosRelatorio, postColetaCompletaFiltroApi, webHookIAAnaliseQualidade, getParametrosLegislacaoBuscaDadosRelacionados, getHistoricoCompletoApi } from '@/service/api';
+import { postColetaCompletaFiltroApi, webHookIAAnaliseQualidade, getParametrosLegislacaoBuscaDadosRelacionados, getHistoricoCompletoApi } from '@/service/api';
 import Swal from "sweetalert2";
 import { SplitButton } from 'primereact/splitbutton';
 import { saveAs } from 'file-saver';
+import { getPiezometrosRelatorio } from '@/service/qualidadeAguaApis';
+
 
 export type QualidadeAguaProps = {
     initialCdPiezometro?: number;
