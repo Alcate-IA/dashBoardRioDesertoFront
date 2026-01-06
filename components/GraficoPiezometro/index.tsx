@@ -3,9 +3,8 @@
 "use client";
 import { useRef, useState } from "react";
 import { Chart } from "primereact/chart";
-import { DataTable } from "primereact/datatable";
-import { Column } from "primereact/column";
 import AnaliseIA from "./AnaliseIA";
+import TabelaDadosPiezometro from "./TabelaDadosPiezometro";
 import { SplitButton } from 'primereact/splitbutton';
 
 import { usePiezometroData } from "@/hooks/usePiezometroData";
@@ -155,128 +154,7 @@ export default function GraficoPiezometro() {
     }
   };
 
-  // Funções auxiliares (mantidas do código original)
-  function eTipoCalhasOuPontoVazao(tipo: string): boolean {
-    return tipo === "PC" || tipo === "PV";
-  }
 
-  // Renderizar colunas da tabela
-  const renderizarColunasTabela = () => {
-    if (tabelaDados.length === 0 || !filters.tipoSelecionado) return null;
-
-    const ehPCouPV = eTipoCalhasOuPontoVazao(filters.tipoSelecionado);
-
-    let colunas = [
-      <Column
-        key="data"
-        field="mes_ano"
-        header="DATA"
-        body={(rowData) => {
-          if (filters.porDia) {
-            const [ano, mes, dia] = rowData.mes_ano.split("-");
-            return `${dia}/${mes}/${ano}`;
-          }
-          const [ano, mes] = rowData.mes_ano.split("-");
-          return `${mes}/${ano}`;
-        }}
-        sortable
-      />,
-    ];
-
-    if (filters.tipoSelecionado === "PP") {
-      colunas.push(
-        <Column
-          key="nivel_estatico"
-          field="nivel_estatico"
-          header="N. ESTÁTICO (M)"
-          body={(d) => <span className="val-green">{d.nivel_estatico}</span>}
-          sortable
-        />,
-        <Column
-          key="cota_superficie"
-          field="cota_superficie"
-          header="COTA SUPERFÍCIE (M)"
-          body={(d) => <span className="val-orange">{d.cota_superficie}</span>}
-          sortable
-        />,
-        <Column
-          key="cota_base"
-          field="cota_base"
-          header="COTA BASE (M)"
-          body={(d) => <span className="val-purple">{d.cota_base}</span>}
-          sortable
-        />,
-        <Column
-          key="precipitacao"
-          field="precipitacao"
-          header="PRECIP. (MM)"
-          sortable
-        />,
-        <Column
-          key="vazao_bombeamento"
-          field="vazao_bombeamento"
-          header="VAZÃO MINA (M³/H)"
-          body={(d) => <span className="val-blue">{d.vazao_bombeamento}</span>}
-          sortable
-        />
-      );
-    } else if (filters.tipoSelecionado === "PR") {
-      colunas.push(
-        <Column
-          key="cota_superficie"
-          field="cota_superficie"
-          header="COTA (M)"
-          body={(d) => <span className="val-orange">{d.cota_superficie}</span>}
-          sortable
-        />,
-        <Column
-          key="nivel_estatico"
-          field="nivel_estatico"
-          header="N. ESTÁTICO (M)"
-          body={(d) => <span className="val-green">{d.nivel_estatico}</span>}
-          sortable
-        />,
-        <Column
-          key="precipitacao"
-          field="precipitacao"
-          header="PRECIP. (MM)"
-          sortable
-        />,
-        <Column
-          key="vazao_bombeamento"
-          field="vazao_bombeamento"
-          header="VAZÃO MINA (M³/H)"
-          body={(d) => <span className="val-blue">{d.vazao_bombeamento}</span>}
-          sortable
-        />
-      );
-    } else if (ehPCouPV) {
-      colunas.push(
-        <Column
-          key="vazao_calha"
-          field="vazao_calha"
-          header="VAZÃO (M³/H)"
-          body={(d) => <span className="val-red">{d.vazao_calha}</span>}
-          sortable
-        />,
-        <Column
-          key="precipitacao"
-          field="precipitacao"
-          header="PRECIP. (MM)"
-          sortable
-        />,
-        <Column
-          key="vazao_bombeamento"
-          field="vazao_bombeamento"
-          header="VAZÃO MINA (M³/H)"
-          body={(d) => <span className="val-blue">{d.vazao_bombeamento}</span>}
-          sortable
-        />
-      );
-    }
-
-    return colunas;
-  };
 
   // Handler de clique na legenda para esconder/mostrar datasets
   const handleLegendClick = (datasetIndex: number) => {
@@ -439,22 +317,12 @@ export default function GraficoPiezometro() {
       </div>
 
       {/* LISTA DOS DADOS DA TABELA */}
-
       {tabelaDados.length > 0 && filters.tipoSelecionado && (
-        <div className="card avoid-break">
-          <h5 className="mb-4 text-white">
-            Painel de Dados - {filters.tipoSelecionado}
-          </h5>
-          <DataTable
-            value={tabelaDados}
-            paginator
-            rows={10}
-            className="p-datatable-sm"
-            emptyMessage="Nenhum dado encontrado"
-          >
-            {renderizarColunasTabela()}
-          </DataTable>
-        </div>
+        <TabelaDadosPiezometro
+          dados={tabelaDados}
+          tipoSelecionado={filters.tipoSelecionado}
+          porDia={filters.porDia}
+        />
       )}
 
     </div>
