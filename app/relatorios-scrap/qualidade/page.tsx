@@ -18,10 +18,10 @@ export default function Page() {
   return (
     <div style={{ padding: 24 }}>
       <QualidadeAgua
-        initialCdPiezometro={Number(cdPiezometro)}
-        initialMesAnoInicio={mesAnoInicio}
-        initialMesAnoFim={mesAnoFim}
-        autoApply
+        idPiezometroInicial={Number(cdPiezometro)}
+        mesAnoInicioInicial={mesAnoInicio}
+        mesAnoFimInicial={mesAnoFim}
+        aplicarAutomaticamente
       />
     </div>
   );
