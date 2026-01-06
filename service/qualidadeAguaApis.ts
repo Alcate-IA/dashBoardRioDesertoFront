@@ -40,7 +40,7 @@ export const getHistoricoCompletoApi = (idZeus: number) => {
     return rota.get(`/qualidade-agua/historico-completo/${idZeus}`);
 };
 
-export const webHookIAAnaliseQualidade = async (dto: any, cdPiezometro: number | string | null, filtros: string[], historico: any): Promise<string | null> => {
+export const webHookIAAnaliseQualidade = async (dto: any, cdPiezometro: number | string | null, filtros: string[], historico: any): Promise<any> => {
     const payload = {
         cdPiezometro: cdPiezometro,
         historico: historico,

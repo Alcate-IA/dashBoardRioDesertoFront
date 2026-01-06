@@ -336,24 +336,31 @@ export default function QualidadeAgua({
                 const historyResponse = await getHistoricoCompletoApi(pontoSelecionado);
                 const historicoData = historyResponse.data;
 
-                const iaResponse = await webHookIAAnaliseQualidade(data, pontoSelecionado, filtrosStrings, historicoData) as any;
-                if (typeof iaResponse === 'string') {
-                    setAnaliseIA(iaResponse);
-                    setAnaliseOriginalIA(iaResponse);
-                } else if (iaResponse && iaResponse[0] && iaResponse[0].output) {
+                let houveErroIA = false;
+                const iaResponse = await webHookIAAnaliseQualidade(data, pontoSelecionado, filtrosStrings, historicoData);
+
+                if (Array.isArray(iaResponse) && iaResponse[0]?.output) {
                     setAnaliseIA(iaResponse[0].output);
                     setAnaliseOriginalIA(iaResponse[0].output);
-                } else if (iaResponse && iaResponse.output) {
-                    setAnaliseIA(iaResponse.output);
-                    setAnaliseOriginalIA(iaResponse.output);
                 } else {
-                    const stringified = JSON.stringify(iaResponse);
-                    setAnaliseIA(stringified);
-                    setAnaliseOriginalIA(stringified);
+                    houveErroIA = true;
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro na Análise',
+                        text: 'houve algum erro com a análise da IA, tente de novo e se o erro persistir nos contate!',
+                        confirmButtonText: 'Fechar',
+                        confirmButtonColor: '#d33'
+                    });
+                }
+
+                if (!houveErroIA) {
+                    Swal.close();
                 }
             }
 
-            Swal.close();
+            if (!data || !data.amostras) {
+                Swal.close();
+            }
 
         } catch (error) {
             console.error("Erro ao buscar dados:", error);
