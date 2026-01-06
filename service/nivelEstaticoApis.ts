@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const rota = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL,
-    timeout: 2000000,
+    timeout: 20000,
 });
 
 
@@ -43,7 +43,7 @@ export const webHookIAAnaliseNivelEstatico = async (dto: any, cdPiezometro: numb
         historico: historico
     };
     try {
-        const response = await axios.post("https://n8n.alcateia-ia.com/webhook/envio-analise-db", payload);
+        const response = await rota.post("https://n8n.alcateia-ia.com/webhook/envio-analise-db", payload, { timeout: 90000 });
         return response.data;
     } catch (error) {
         console.error("Erro ao enviar dados para o webhook:", error);

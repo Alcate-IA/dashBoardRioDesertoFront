@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const rota = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL,
-    timeout: 2000000,
+    timeout: 20000,
 });
 
 export const salvarAvaliacaoIAQualidadeAgua = async (dados: {
@@ -40,7 +40,7 @@ export const getHistoricoCompletoApi = (idZeus: number) => {
     return rota.get(`/qualidade-agua/historico-completo/${idZeus}`);
 };
 
-export const webHookIAAnaliseQualidade = async (dto: any, cdPiezometro: number | string | null, filtros: string[], historico: any): Promise<string | null> => {
+export const webHookIAAnaliseQualidade = async (dto: any, cdPiezometro: number | string | null, filtros: string[], historico: any): Promise<any> => {
     const payload = {
         cdPiezometro: cdPiezometro,
         historico: historico,
@@ -50,7 +50,7 @@ export const webHookIAAnaliseQualidade = async (dto: any, cdPiezometro: number |
         }
     };
     try {
-        const response = await axios.post("https://n8n.alcateia-ia.com/webhook/envio-analise-db-qualidade", payload);
+        const response = await rota.post("https://n8n.alcateia-ia.com/webhook/envio-analise-db-qualidade", payload, { timeout: 90000 });
         return response.data;
     } catch (error) {
         console.error("Erro ao enviar dados para o webhook:", error);

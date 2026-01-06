@@ -270,11 +270,21 @@ export const usePiezometroData = () => {
                 )
                 : (dadosFiltrados && dadosFiltrados.length > 0);
 
+            let houveErroIA = false;
             if (temDadosIA) {
                 const iaResponse = await webHookIAAnaliseNivelEstatico(dadosParaIA, idSelecionado, historicoCompleto);
-                if (iaResponse && iaResponse[0]) {
+                if (Array.isArray(iaResponse) && iaResponse[0]?.output) {
                     setAnaliseIANivelEstatico(iaResponse[0].output);
                     setAnaliseOriginalIA(iaResponse[0].output);
+                } else {
+                    houveErroIA = true;
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro na Análise',
+                        text: 'Houve algum erro com a análise da IA, tente de novo e se o erro persistir nos contate!',
+                        confirmButtonText: 'Fechar',
+                        confirmButtonColor: '#d33'
+                    });
                 }
             }
 
@@ -607,7 +617,9 @@ export const usePiezometroData = () => {
                 setLineOptions(optionsBase);
             }
 
-            Swal.close();
+            if (!houveErroIA) {
+                Swal.close();
+            }
 
         } catch (err) {
             Swal.fire({
