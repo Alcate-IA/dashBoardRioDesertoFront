@@ -281,7 +281,7 @@ export const usePiezometroData = () => {
                     Swal.fire({
                         icon: 'error',
                         title: 'Erro na Análise',
-                        text: 'houve algum erro com a análise da IA, tente de novo e se o erro persistir nos contate!',
+                        text: 'Houve algum erro com a análise da IA, tente de novo e se o erro persistir nos contate!',
                         confirmButtonText: 'Fechar',
                         confirmButtonColor: '#d33'
                     });
