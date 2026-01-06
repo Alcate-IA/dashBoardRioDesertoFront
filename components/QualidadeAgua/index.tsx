@@ -422,7 +422,7 @@ export default function QualidadeAgua({
 
             {dadosColeta && dadosColeta.amostras && (
                 <div className="mt-5">
-                    <GraficosAnalise dados={dadosColeta} isReport={isReport} />
+                    <GraficosAnalise dados={dadosColeta} ehRelatorio={isReport} />
                 </div>
             )}
 
