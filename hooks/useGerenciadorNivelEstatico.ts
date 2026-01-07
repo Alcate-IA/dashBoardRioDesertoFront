@@ -146,7 +146,9 @@ export const useGerenciadorNivelEstatico = () => {
             const fimStr = formatarData(filtros.dataFim, filtros.porDia);
 
             // 0. Chamada de Fotos de Inspeção
-            buscarFotosInspecao();
+            const inicioFotos = formatarData(filtros.dataInicio, true);
+            const fimFotos = formatarData(filtros.dataFim, true);
+            buscarFotosInspecao(inicioFotos, fimFotos);
 
             // 1. Chamada da API Principal
             const api = filtros.porDia
@@ -216,7 +218,7 @@ export const useGerenciadorNivelEstatico = () => {
     }, [filtros]);
 
     // Função interna para busca de fotos
-    const buscarFotosInspecao = useCallback(async () => {
+    const buscarFotosInspecao = useCallback(async (inicio: string, fim: string) => {
         if (!filtros.idSelecionado) {
             setFotosInspecao([]);
             return;
@@ -224,7 +226,7 @@ export const useGerenciadorNivelEstatico = () => {
 
         setEstaCarregandoFotos(true);
         try {
-            const resposta = await getFotosInspecaoPiezometroApi(filtros.idSelecionado);
+            const resposta = await getFotosInspecaoPiezometroApi(filtros.idSelecionado, inicio, fim);
             setFotosInspecao(resposta.data || []);
         } catch (erro) {
             console.error("Erro ao buscar fotos de inspeção:", erro);
