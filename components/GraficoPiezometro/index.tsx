@@ -38,7 +38,8 @@ export default function GraficoPiezometro() {
   const { aoGerarPdf, aoGerarWord } = useExportacaoRelatorioTelaNivelEstatico(
     chartRef as any,
     piezometros,
-    filtros.idSelecionado
+    filtros.idSelecionado,
+    fotosInspecao
   );
 
 

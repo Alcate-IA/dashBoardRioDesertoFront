@@ -240,6 +240,7 @@ export const useGerenciadorNivelEstatico = () => {
         setAnaliseIA(null);
         setAnaliseOriginalIA(null);
         setSumario({ nivelEstatico: 0, cotaSuperficie: 0, cotaBase: 0, precipitacao: 0, vazaoMina: 0, vazao: 0, total: 0 });
+        setFotosInspecao([]);
     }, [filtros]);
 
     return {

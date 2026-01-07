@@ -17,7 +17,8 @@ interface PiezometroOption {
 export const useExportacaoRelatorioTelaNivelEstatico = (
     chartRef: RefObject<Chart>,
     piezometros: PiezometroOption[],
-    idSelecionado: number | null
+    idSelecionado: number | null,
+    fotosInspecao: any[] = []
 ) => {
 
     const obterNomePiezometro = () => {
@@ -80,6 +81,89 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
             containerAnalise.appendChild(p);
         });
         containerImpressao.appendChild(containerAnalise);
+
+        // Adicionar Tabela de Fotos de Inspeção se houver fotos
+        if (fotosInspecao && fotosInspecao.length > 0) {
+            const containerFotos = document.createElement('div');
+            containerFotos.style.marginTop = '30px';
+            containerFotos.style.breakBefore = 'page'; // Força que as fotos comecem em uma nova página se necessário
+
+            const tituloFotos = document.createElement('h4');
+            tituloFotos.textContent = 'Fotos de Inspeção';
+            tituloFotos.style.marginBottom = '15px';
+            tituloFotos.style.color = '#000';
+            containerFotos.appendChild(tituloFotos);
+
+            const tabela = document.createElement('table');
+            tabela.style.width = '100%';
+            tabela.style.borderCollapse = 'collapse';
+            tabela.style.border = '1px solid #ccc';
+
+            // Cabeçalho da Tabela
+            const thead = document.createElement('thead');
+            const trHeader = document.createElement('tr');
+            ['Ponto', 'Data', 'Hora', 'Foto'].forEach(texto => {
+                const th = document.createElement('th');
+                th.textContent = texto;
+                th.style.border = '1px solid #ccc';
+                th.style.padding = '8px';
+                th.style.backgroundColor = '#f4f4f4';
+                th.style.color = '#000';
+                trHeader.appendChild(th);
+            });
+            thead.appendChild(trHeader);
+            tabela.appendChild(thead);
+
+            // Corpo da Tabela
+            const tbody = document.createElement('tbody');
+            fotosInspecao.forEach(foto => {
+                const tr = document.createElement('tr');
+
+                const dataObj = new Date(foto.dataInsercao);
+                const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+                const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                const criarCelula = (conteudo: string | HTMLElement) => {
+                    const td = document.createElement('td');
+                    td.style.border = '1px solid #ccc';
+                    td.style.padding = '10px';
+                    td.style.textAlign = 'center';
+                    td.style.color = '#000';
+                    if (typeof conteudo === 'string') {
+                        td.textContent = conteudo;
+                    } else {
+                        td.appendChild(conteudo);
+                    }
+                    return td;
+                };
+
+                tr.appendChild(criarCelula(foto.idPiezometro || 'N/A'));
+                tr.appendChild(criarCelula(dataFormatada));
+                tr.appendChild(criarCelula(horaFormatada));
+
+                // Célula da Foto (Placeholder por enquanto)
+                const divFoto = document.createElement('div');
+                divFoto.style.width = '120px';
+                divFoto.style.height = '80px';
+                divFoto.style.backgroundColor = '#f0f0f0';
+                divFoto.style.border = '1px dashed #ccc';
+                divFoto.style.display = 'flex';
+                divFoto.style.alignItems = 'center';
+                divFoto.style.justifyContent = 'center';
+                divFoto.style.margin = '0 auto';
+
+                const iconPlaceholder = document.createElement('span');
+                iconPlaceholder.textContent = '📸'; // Emoji de câmera como placeholder
+                divFoto.appendChild(iconPlaceholder);
+
+                tr.appendChild(criarCelula(divFoto));
+
+                tbody.appendChild(tr);
+            });
+            tabela.appendChild(tbody);
+            containerFotos.appendChild(tabela);
+            containerImpressao.appendChild(containerFotos);
+        }
 
         try {
             const html2pdf = (await import("html2pdf.js")).default;
