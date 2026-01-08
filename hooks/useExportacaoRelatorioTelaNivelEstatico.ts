@@ -26,6 +26,25 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
         return piezometro ? piezometro.label : 'Não selecionado';
     };
 
+    const urlToBase64 = (url: string): Promise<string> => {
+        return new Promise(async (resolve) => {
+            // Usa o proxy de imagens do próprio app para evitar problemas de CORS no fetch do lado do cliente.
+            const proxyUrl = `/imagens-proxy?url=${encodeURIComponent(url)}`;
+            try {
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error('Network response from proxy was not ok.');
+                const blob = await response.blob();
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = () => resolve(''); // Resolve com string vazia em caso de erro na leitura
+                reader.readAsDataURL(blob);
+            } catch (error) {
+                console.error(`Failed to convert URL to Base64 via proxy: ${url}`, error);
+                resolve(''); // Resolve com string vazia em caso de erro no fetch
+            }
+        });
+    };
+
     const aoGerarPdf = async () => {
         const canvasGrafico = chartRef.current?.getCanvas();
         const elementoAnaliseIA = document.getElementById("textoApareceNoPdf");
@@ -40,7 +59,6 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
             return;
         }
 
-        // Criar container temporário para impressão
         const containerImpressao = document.createElement("div");
         containerImpressao.style.padding = "20px";
 
@@ -82,10 +100,10 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
         });
         containerImpressao.appendChild(containerAnalise);
 
-        // Adicionar Tabela de Fotos de Inspeção se houver fotos
         if (fotosInspecao && fotosInspecao.length > 0) {
             const containerFotos = document.createElement('div');
             containerFotos.style.marginTop = '30px';
+            containerFotos.style.breakInside = 'avoid'; 
 
             const tituloFotos = document.createElement('h4');
             tituloFotos.textContent = 'Fotos de Inspeção';
@@ -98,7 +116,6 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
             tabela.style.borderCollapse = 'collapse';
             tabela.style.border = '1px solid #ccc';
 
-            // Cabeçalho da Tabela
             const thead = document.createElement('thead');
             const trHeader = document.createElement('tr');
             ['Ponto', 'Data', 'Hora', 'Foto'].forEach(texto => {
@@ -112,12 +129,12 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
             });
             thead.appendChild(trHeader);
             tabela.appendChild(thead);
-
-            // Corpo da Tabela
+            
             const tbody = document.createElement('tbody');
-            fotosInspecao.forEach(foto => {
-                const tr = document.createElement('tr');
+            const fotosBase64 = await Promise.all(fotosInspecao.map(foto => urlToBase64(foto.caminhoCompleto)));
 
+            fotosInspecao.forEach((foto, index) => {
+                const tr = document.createElement('tr');
                 const dataObj = new Date(foto.dataInsercao);
                 const dataFormatada = dataObj.toLocaleDateString('pt-BR');
                 const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -128,6 +145,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                     td.style.padding = '10px';
                     td.style.textAlign = 'center';
                     td.style.color = '#000';
+                    td.style.verticalAlign = 'middle';
                     if (typeof conteudo === 'string') {
                         td.textContent = conteudo;
                     } else {
@@ -140,22 +158,15 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                 tr.appendChild(criarCelula(dataFormatada));
                 tr.appendChild(criarCelula(horaFormatada));
 
-                // Célula da Foto (Placeholder por enquanto)
-                const divFoto = document.createElement('div');
-                divFoto.style.width = '120px';
-                divFoto.style.height = '80px';
-                divFoto.style.backgroundColor = '#f0f0f0';
-                divFoto.style.border = '1px dashed #ccc';
-                divFoto.style.display = 'flex';
-                divFoto.style.alignItems = 'center';
-                divFoto.style.justifyContent = 'center';
-                divFoto.style.margin = '0 auto';
-
-                const iconPlaceholder = document.createElement('span');
-                iconPlaceholder.textContent = '📸'; // Emoji de câmera como placeholder
-                divFoto.appendChild(iconPlaceholder);
-
-                tr.appendChild(criarCelula(divFoto));
+                const imgFoto = document.createElement('img');
+                imgFoto.src = fotosBase64[index];
+                imgFoto.style.width = '340px';
+                imgFoto.style.height = 'auto';
+                imgFoto.style.display = 'block';
+                imgFoto.style.margin = '0 auto';
+                
+                // Correção do erro de tipo: passar string em caso de falha
+                tr.appendChild(criarCelula(fotosBase64[index] ? imgFoto : 'Erro ao carregar'));
 
                 tbody.appendChild(tr);
             });
@@ -170,7 +181,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                 margin: 1,
                 filename: `relatorio-piezometro-${obterNomePiezometro()}.pdf`,
                 image: { type: "jpeg" as const, quality: 0.98 },
-                html2canvas: { scale: 2, letterRendering: true },
+                html2canvas: { scale: 2, letterRendering: true, useCORS: true },
                 jsPDF: { unit: "in", format: "letter", orientation: "landscape" as const },
             };
 
@@ -192,21 +203,32 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
 
         const urlImagemGrafico = canvasGrafico.toDataURL("image/png");
         const textoAnalise = (elementoAnaliseIA as HTMLElement).innerText;
-        const linhasAnaliseHtml = textoAnalise.split('\n')
-            .map(linha => `<p style="margin: 0;">${linha || '&nbsp;'}</p>`)
-            .join('');
+        const linhasAnaliseHtml = textoAnalise.split('\n').map(linha => `<p style="margin: 0;">${linha || '&nbsp;'}</p>`).join('');
 
-        const htmlString = `
-            <div style="font-family: Arial; padding: 20px;">
-                <h3 style="color: #000; margin-bottom: 20px;">${obterNomePiezometro()}:</h3>
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <img src="${urlImagemGrafico}" style="width: 600px;" />
-                </div>
-                <div style="margin-top: 20px; color: #000;">
-                    ${linhasAnaliseHtml} 
-                </div>
-                ${fotosInspecao && fotosInspecao.length > 0 ? `
-                <div style="margin-top: 30px;">
+        let tabelaFotosHtml = '';
+        if (fotosInspecao && fotosInspecao.length > 0) {
+            const fotosBase64 = await Promise.all(fotosInspecao.map(foto => urlToBase64(foto.caminhoCompleto)));
+
+            const linhasTabelaFotos = fotosInspecao.map((foto, index) => {
+                const dataObj = new Date(foto.dataInsercao);
+                const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+                const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const imgTag = fotosBase64[index] 
+                    ? `<img src="${fotosBase64[index]}" style="width: 340px; height: auto; display: block; margin: 0 auto;" />`
+                    : 'Erro ao carregar imagem';
+
+                return `
+                    <tr>
+                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${foto.idPiezometro || 'N/A'}</td>
+                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${dataFormatada}</td>
+                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${horaFormatada}</td>
+                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${imgTag}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            tabelaFotosHtml = `
+                <div style="margin-top: 30px; page-break-before: auto;">
                     <h4 style="color: #000; margin-bottom: 15px;">Fotos de Inspeção</h4>
                     <table style="width: 100%; border-collapse: collapse; border: 1px solid #ccc;">
                         <thead>
@@ -218,27 +240,23 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                             </tr>
                         </thead>
                         <tbody>
-                            ${fotosInspecao.map(foto => {
-            const dataObj = new Date(foto.dataInsercao);
-            const dataFormatada = dataObj.toLocaleDateString('pt-BR');
-            const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            return `
-                                    <tr>
-                                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000;">${foto.idPiezometro || 'N/A'}</td>
-                                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000;">${dataFormatada}</td>
-                                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000;">${horaFormatada}</td>
-                                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000;">
-                                            <div style="width: 120px; height: 80px; background-color: #f0f0f0; border: 1px dashed #ccc; margin: auto;">
-                                                [FOTO]
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `;
-        }).join('')}
+                            ${linhasTabelaFotos}
                         </tbody>
                     </table>
                 </div>
-                ` : ''}
+            `;
+        }
+
+        const htmlString = `
+            <div style="font-family: Arial; padding: 20px;">
+                <h3 style="color: #000; margin-bottom: 20px;">${obterNomePiezometro()}:</h3>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <img src="${urlImagemGrafico}" style="width: 600px;" />
+                </div>
+                <div style="margin-top: 20px; color: #000;">
+                    ${linhasAnaliseHtml} 
+                </div>
+                ${tabelaFotosHtml}
             </div>
         `;
 
@@ -266,3 +284,4 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
         aoGerarWord
     };
 };
+
