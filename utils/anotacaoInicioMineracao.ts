@@ -7,8 +7,8 @@
  */
 
 // Data fixa do início da mineração: Outubro de 2012
-export const DATA_INICIO_MINERACAO = new Date(2008, 10, 1); // Mês é 0-indexed, então 9 = outubro
-export const LABEL_INICIO_MINERACAO = "out. 2008"; // Formato usado nos labels do gráfico
+export const DATA_INICIO_MINERACAO = new Date(2008, 2, 1); 
+export const LABEL_INICIO_MINERACAO = "Mar. 2008"; // Formato usado nos labels do gráfico
 
 /**
  * Verifica se o intervalo de datas selecionado inclui outubro de 2012
@@ -26,10 +26,11 @@ export function intervaloIncluiInicioMineracao(dataInicio: Date | null, dataFim:
  */
 export function encontrarIndiceLabelMineracao(labels: string[]): number {
     const possiveisLabels = [
-        "out. 2012",
-        "out. de 2012",
-        "outubro 2012",
-        "10/2012"
+        "mar. 2008",
+        "mar. de 2008",
+        "março 2008",
+        "03/2008",
+        "03-2008"
     ];
 
     return labels.findIndex(label =>
