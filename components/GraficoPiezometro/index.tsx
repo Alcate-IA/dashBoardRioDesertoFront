@@ -5,6 +5,7 @@ import { useRef } from "react";
 import GraficoTelaNivelEstatico from "./GraficoTelaNivelEstatico";
 import AnaliseIA from "./AnaliseIA";
 import TabelaDadosPiezometro from "./TabelaDadosPiezometro";
+import CarrosselFotosInspecao from "./CarrosselFotosInspecao";
 import { SplitButton } from 'primereact/splitbutton';
 
 import { useGerenciadorNivelEstatico } from "@/hooks/useGerenciadorNivelEstatico";
@@ -30,12 +31,15 @@ export default function GraficoPiezometro() {
     setAnaliseIA,
     analiseOriginalIA,
     estaCarregandoIA,
+    fotosInspecao,
+    estaCarregandoFotos,
   } = useGerenciadorNivelEstatico();
 
   const { aoGerarPdf, aoGerarWord } = useExportacaoRelatorioTelaNivelEstatico(
     chartRef as any,
     piezometros,
-    filtros.idSelecionado
+    filtros.idSelecionado,
+    fotosInspecao
   );
 
 
@@ -107,6 +111,12 @@ export default function GraficoPiezometro() {
           cdPiezometro={filtros.idSelecionado}
         />
       </div>
+
+      {/* FOTOS DE INSPEÇÃO */}
+      <CarrosselFotosInspecao
+        fotos={fotosInspecao}
+        estaCarregando={estaCarregandoFotos}
+      />
 
       {/* LISTA DOS DADOS DA TABELA */}
       {tabelaDados.length > 0 && filtros.tipoSelecionado && (

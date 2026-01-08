@@ -1,5 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'http',
+                hostname: '192.168.100.95',
+                port: '3001',
+                pathname: '/ver-fotos/**',
+            },
+        ],
+    },
     webpack: (config, { isServer }) => {
         if (!isServer) {
             config.resolve.fallback = {

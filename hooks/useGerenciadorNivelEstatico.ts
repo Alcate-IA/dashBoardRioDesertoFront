@@ -5,7 +5,8 @@ import Swal from "sweetalert2";
 import {
     getPiezometroFiltroComHistoricoApi,
     getPiezometroDiarioApi,
-    webHookIAAnaliseNivelEstatico
+    webHookIAAnaliseNivelEstatico,
+    getFotosInspecaoPiezometroApi
 } from "@/service/nivelEstaticoApis";
 import { formatarData } from "@/utils/formatarData";
 import { useFiltrosNivelEstatico } from "./useFiltrosNivelEstatico";
@@ -60,6 +61,10 @@ export const useGerenciadorNivelEstatico = () => {
     const [analiseIA, setAnaliseIA] = useState<string | null>(null);
     const [analiseOriginalIA, setAnaliseOriginalIA] = useState<string | null>(null);
     const [estaCarregandoIA, setEstaCarregandoIA] = useState(false);
+
+    // Estados de Fotos de Inspeção
+    const [fotosInspecao, setFotosInspecao] = useState<any[]>([]);
+    const [estaCarregandoFotos, setEstaCarregandoFotos] = useState(false);
 
     // 3. Ferramenta de Configuração Visual do Gráfico
     const { dadosGrafico, opcoesGrafico } = useConfiguracaoGraficoNivelEstatico(
@@ -140,6 +145,11 @@ export const useGerenciadorNivelEstatico = () => {
             const inicioStr = formatarData(filtros.dataInicio, filtros.porDia);
             const fimStr = formatarData(filtros.dataFim, filtros.porDia);
 
+            // 0. Chamada de Fotos de Inspeção
+            const inicioFotos = formatarData(filtros.dataInicio, true);
+            const fimFotos = formatarData(filtros.dataFim, true);
+            buscarFotosInspecao(inicioFotos, fimFotos);
+
             // 1. Chamada da API Principal
             const api = filtros.porDia
                 ? getPiezometroDiarioApi(filtros.idSelecionado, inicioStr, fimStr)
@@ -207,12 +217,32 @@ export const useGerenciadorNivelEstatico = () => {
         }
     }, [filtros]);
 
+    // Função interna para busca de fotos
+    const buscarFotosInspecao = useCallback(async (inicio: string, fim: string) => {
+        if (!filtros.idSelecionado) {
+            setFotosInspecao([]);
+            return;
+        }
+
+        setEstaCarregandoFotos(true);
+        try {
+            const resposta = await getFotosInspecaoPiezometroApi(filtros.idSelecionado, inicio, fim);
+            setFotosInspecao(resposta.data || []);
+        } catch (erro) {
+            console.error("Erro ao buscar fotos de inspeção:", erro);
+            setFotosInspecao([]);
+        } finally {
+            setEstaCarregandoFotos(false);
+        }
+    }, [filtros.idSelecionado]);
+
     // Limpa os resultados atuais se qualquer filtro for alterado (Garante proteção de dados)
     useEffect(() => {
         setTabelaDados([]);
         setAnaliseIA(null);
         setAnaliseOriginalIA(null);
         setSumario({ nivelEstatico: 0, cotaSuperficie: 0, cotaBase: 0, precipitacao: 0, vazaoMina: 0, vazao: 0, total: 0 });
+        setFotosInspecao([]);
     }, [filtros]);
 
     return {
@@ -232,6 +262,10 @@ export const useGerenciadorNivelEstatico = () => {
         analiseOriginalIA,
         setAnaliseIA,
         estaCarregandoIA,
+
+        // Fotos de Inspeção
+        fotosInspecao,
+        estaCarregandoFotos,
 
         // Configuração do Gráfico (Chart.js)
         dadosGrafico,
