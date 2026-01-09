@@ -50,7 +50,7 @@ export const webHookIAAnaliseQualidade = async (dto: any, cdPiezometro: number |
         }
     };
     try {
-        const response = await rota.post("https://n8n.alcateia-ia.com/webhook/envio-analise-db-qualidade", payload, { timeout: 90000 });
+        const response = await axios.post("/webhook-proxy/envio-analise-db-qualidade", payload, { timeout: 90000 });
         return response.data;
     } catch (error) {
         console.error("Erro ao enviar dados para o webhook:", error);

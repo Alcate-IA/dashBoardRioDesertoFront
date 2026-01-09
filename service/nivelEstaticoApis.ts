@@ -43,7 +43,7 @@ export const webHookIAAnaliseNivelEstatico = async (dto: any, cdPiezometro: numb
         historico: historico
     };
     try {
-        const response = await rota.post("https://n8n.alcateia-ia.com/webhook/envio-analise-db", payload, { timeout: 90000 });
+        const response = await axios.post("/webhook-proxy/envio-analise-db", payload, { timeout: 90000 });
         return response.data;
     } catch (error) {
         console.error("Erro ao enviar dados para o webhook:", error);

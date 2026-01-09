@@ -24,9 +24,18 @@ const nextConfig = {
                 child_process: false,
                 encoding: false,
                 debug: false,
+                // ignore
             };
         }
         return config;
+    },
+    async rewrites() {
+        return [
+            {
+                source: '/webhook-proxy/:path*',
+                destination: 'http://192.168.100.95:5678/webhook/:path*',
+            },
+        ];
     },
 };
 
