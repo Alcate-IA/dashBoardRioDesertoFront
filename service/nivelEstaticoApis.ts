@@ -43,10 +43,10 @@ export const webHookIAAnaliseNivelEstatico = async (dto: any, cdPiezometro: numb
         historico: historico
     };
     try {
-        const response = await axios.post("/webhook-proxy/envio-analise-db", payload, { timeout: 90000 });
+        const response = await rota.post("/avaliacoes-analise-ia-nivel-estatico/analisar", payload, { timeout: 90000 });
         return response.data;
     } catch (error) {
-        console.error("Erro ao enviar dados para o webhook:", error);
+        console.error("Erro ao comunicar com o backend:", error);
         return null;
     }
 };
