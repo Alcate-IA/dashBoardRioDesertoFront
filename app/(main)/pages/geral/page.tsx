@@ -20,6 +20,8 @@ interface MovimentoRdLab {
     id_zeus: number;
     cd_piezometro: number;
     nm_piezometro: string;
+    nm_colaborador_inspecao?: string;
+    tp_piezometro?: string;
 }
 
 export default function GeralPage() {
@@ -69,7 +71,8 @@ export default function GeralPage() {
     };
 
     const templateMovimento = (movimento: MovimentoRdLab) => {
-        const dataFormatada = movimento.data.split('-').reverse().join('/');
+        const dataFormatada = movimento.data ? movimento.data.split('-').reverse().join('/') : '-';
+        const nomeColaborador = movimento.nm_colaborador_inspecao || movimento.coletor;
 
         return (
             <div className="p-2">
@@ -86,7 +89,13 @@ export default function GeralPage() {
                         <div className="flex align-items-center gap-2">
                             <i className="pi pi-user text-primary"></i>
                             <span className="text-600">Coletor:</span>
-                            <span className="text-900 font-medium">{movimento.coletor}</span>
+                            <span className="text-900 font-medium">{nomeColaborador}</span>
+                        </div>
+
+                        <div className="flex align-items-center gap-2">
+                            <i className="pi pi-tag text-primary"></i>
+                            <span className="text-600">Tipo:</span>
+                            <span className="text-900 font-medium">{movimento.tp_piezometro}</span>
                         </div>
 
                         <div className="flex align-items-center gap-2">
