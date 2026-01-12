@@ -34,6 +34,11 @@ const AppMenu = () => {
       label: "Telas",
       items: [
         {
+          label: "Visão Geral",
+          to: "/",
+          icon: "pi pi-fw pi-home",
+        },
+        {
           label: "Nível Estático, Precipitação e Vazão",
           to: "/pages/relatorio-nivel-estatico",
           icon: "pi pi-fw pi-chart-line",
