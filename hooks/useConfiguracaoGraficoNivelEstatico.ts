@@ -133,10 +133,14 @@ export const useConfiguracaoGraficoNivelEstatico = (
                 }
             ];
         } else if (ehPCouPV) {
+            const vazaoCalhaData = dados.map((i: any) => i.vazao_calha);
+            const vazaoBombeamentoData = dados.map((i: any) => i.vazao_bombeamento);
+            const precipitacaoData = dados.map((i: any) => i.precipitacao);
+
             datasets = [
                 {
                     label: "Vazão",
-                    data: dados.map((i: any) => i.vazao_calha),
+                    data: vazaoCalhaData,
                     borderColor: '#ff6384',
                     borderWidth: 3,
                     tension: 0.4,
@@ -144,7 +148,7 @@ export const useConfiguracaoGraficoNivelEstatico = (
                 },
                 {
                     label: "Vazão Mina",
-                    data: dados.map((i: any) => i.vazao_bombeamento),
+                    data: vazaoBombeamentoData,
                     borderColor: '#00bb7e',
                     borderWidth: 1,
                     tension: 0.4,
@@ -152,7 +156,7 @@ export const useConfiguracaoGraficoNivelEstatico = (
                 },
                 {
                     label: "Precipitação",
-                    data: dados.map((i: any) => i.precipitacao),
+                    data: precipitacaoData,
                     borderColor: '#2f4860',
                     borderWidth: 1,
                     tension: 0.4,

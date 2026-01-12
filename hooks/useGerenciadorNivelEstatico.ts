@@ -75,18 +75,16 @@ export const useGerenciadorNivelEstatico = () => {
         filtros.dataFim
     );
 
-    // Helper para transformar dados diários (que vêm em listas separadas por categoria) em um array unificado por data
     const processarDadosDiarios = (dadosBrutos: any) => {
         if (!dadosBrutos || Array.isArray(dadosBrutos)) return dadosBrutos;
 
-        const {
-            precipitacao = [],
-            nivel_estatico = [],
-            vazao_bombeamento = [],
-            vazao_calha = [],
-            cota_superficie,
-            cota_base
-        } = dadosBrutos;
+        // Garantir que todas as listas sejam arrays, mesmo se vierem como null
+        const precipitacao = Array.isArray(dadosBrutos.precipitacao) ? dadosBrutos.precipitacao : [];
+        const nivel_estatico = Array.isArray(dadosBrutos.nivel_estatico) ? dadosBrutos.nivel_estatico : [];
+        const vazao_bombeamento = Array.isArray(dadosBrutos.vazao_bombeamento) ? dadosBrutos.vazao_bombeamento : [];
+        const vazao_calha = Array.isArray(dadosBrutos.vazao_calha) ? dadosBrutos.vazao_calha : [];
+        const cota_superficie = dadosBrutos.cota_superficie;
+        const cota_base = dadosBrutos.cota_base;
 
         const mapaPorData: Record<string, any> = {};
 
@@ -97,6 +95,9 @@ export const useGerenciadorNivelEstatico = () => {
         };
 
         const mesclar = (lista: any[], campo: string) => {
+            if (!lista || lista.length === 0) {
+                return;
+            }
             lista.forEach(item => {
                 const dt = padronizarData(item.data);
                 if (!mapaPorData[dt]) mapaPorData[dt] = { mes_ano: dt };
@@ -109,13 +110,15 @@ export const useGerenciadorNivelEstatico = () => {
         mesclar(vazao_bombeamento, 'vazao_bombeamento');
         mesclar(vazao_calha, 'vazao_calha');
 
-        return Object.values(mapaPorData)
+        const resultado = Object.values(mapaPorData)
             .map((item: any) => ({
                 ...item,
-                cota_superficie: item.cota_superficie ?? cota_superficie,
-                cota_base: item.cota_base ?? cota_base
+                ...(cota_superficie !== null && cota_superficie !== undefined && { cota_superficie }),
+                ...(cota_base !== null && cota_base !== undefined && { cota_base })
             }))
             .sort((a, b) => a.mes_ano.localeCompare(b.mes_ano));
+
+        return resultado;
     };
 
     // Função de execução da busca principal
