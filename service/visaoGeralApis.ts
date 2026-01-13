@@ -16,3 +16,7 @@ export const apiGeralUltimosMovimentosRdLab = () => {
 export const apiGeralUltimosMovimentosZeus = () => {
     return rota.get("/api/geral/ultimos-movimentos-zeus");
 };
+
+export const apiDadosDaVazaoDaMina = () => {
+    return rota.get("/api/vazao-mina/estatisticas");
+};
