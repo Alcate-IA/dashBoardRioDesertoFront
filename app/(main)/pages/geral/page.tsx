@@ -21,7 +21,7 @@ interface MovimentoRdLab {
     cd_piezometro: number;
     nm_piezometro: string;
     nm_colaborador_inspecao?: string;
-    tp_piezometro?: string;
+    //tp_piezometro?: string;
 }
 
 interface MovimentoZeus {
@@ -110,11 +110,11 @@ export default function GeralPage() {
                             <span className="text-900 font-medium">{nomeColaborador}</span>
                         </div>
 
-                        <div className="flex align-items-center gap-2">
+                        {/* <div className="flex align-items-center gap-2">
                             <i className="pi pi-tag text-primary"></i>
                             <span className="text-600">Tipo:</span>
                             <span className="text-900 font-medium">{movimento.tp_piezometro}</span>
-                        </div>
+                        </div> */}
 
                         <div className="flex align-items-center gap-2">
                             <i className="pi pi-hashtag text-primary"></i>
