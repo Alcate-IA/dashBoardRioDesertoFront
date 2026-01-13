@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getApiGeralContadores, apiGeralUltimosMovimentosRdLab, apiGeralUltimosMovimentosZeus } from "@/service/visaoGeralApis";
+import { getApiGeralContadores, apiGeralUltimosMovimentosRdLab, apiGeralUltimosMovimentosZeus, apiDadosDaVazaoDaMina } from "@/service/visaoGeralApis";
 import Swal from "sweetalert2";
 import { Carousel } from 'primereact/carousel';
 
@@ -46,11 +46,25 @@ interface MovimentoZeus {
     dados?: MovimentoZeusDados;
 }
 
+interface DadosVazaoMina {
+    ultima_data: string;
+    media_3_meses_anteriores: number;
+    ultima_vazao: number;
+    primeira_data: string;
+    total_registros: number;
+    meses_considerados_para_media: string[];
+    minimo_vazao: number;
+    maximo_vazao: number;
+    media_vazao: number;
+}
+
 export default function GeralPage() {
     const router = useRouter();
     const [contadores, setContadores] = useState<ContadoresData>({ contadoresZeus: 0, contadoresRdLab: 0 });
     const [movimentos, setMovimentos] = useState<MovimentoRdLab[]>([]);
     const [movimentosZeus, setMovimentosZeus] = useState<MovimentoZeus[]>([]);
+    const [dadosVazaoDaMina, setDadosVazaoDaMina] = useState<DadosVazaoMina | null>(null);
+    const [analiseIa, setAnaliseIa] = useState<string | null>(null); 
 
     useEffect(() => {
         Swal.fire({
@@ -63,12 +77,15 @@ export default function GeralPage() {
         Promise.all([
             getApiGeralContadores(),
             apiGeralUltimosMovimentosRdLab(),
-            apiGeralUltimosMovimentosZeus()
+            apiGeralUltimosMovimentosZeus(), 
+            apiDadosDaVazaoDaMina()
         ])
-            .then(([resContadores, resMovimentos, resZeus]) => {
+            .then(([resContadores, resMovimentos, resZeus, resDadosVazaoDaMina]) => {
                 setContadores(resContadores.data);
                 setMovimentos(resMovimentos.data || []);
                 setMovimentosZeus(resZeus.data || []);
+                setDadosVazaoDaMina(resDadosVazaoDaMina.data?.resultado || null);
+                setAnaliseIa(JSON.parse(resDadosVazaoDaMina.data.analiseIa.resposta_raw)[0].output || null);
                 Swal.close();
             })
             .catch((error) => {
@@ -201,21 +218,47 @@ export default function GeralPage() {
                                         Menor leitura já vista
                                     </span>
                                 )}
-                                {movimento.dados.media ? (
-                                    <span className="inline-flex align-items-center gap-1 px-2 py-1 border-round bg-green-100 text-green-700 text-xs font-bold" title="Acima da média">
-                                        <i className="pi pi-arrow-up text-green-700"></i>
-                                        Acima da média
-                                    </span>
-                                ) : (
-                                    <span className="inline-flex align-items-center gap-1 px-2 py-1 border-round bg-orange-100 text-orange-700 text-xs font-bold" title="Abaixo da média">
-                                        <i className="pi pi-arrow-down text-orange-700"></i>
-                                        Abaixo da média
-                                    </span>
-                                )}
                             </div>
                         )}
                     </div>
                 </div>
+            </div>
+        );
+    };
+
+    const renderVazaoTags = (dados: DadosVazaoMina) => {
+        const { ultima_vazao, maximo_vazao, minimo_vazao, media_vazao } = dados;
+        const tags = [];
+
+        // 1. Extremos
+        if (ultima_vazao >= maximo_vazao) {
+            tags.push({ text: 'Maior de todas', color: 'bg-red-100 text-red-700', icon: 'pi-exclamation-circle' });
+        } else if (ultima_vazao <= minimo_vazao) {
+            tags.push({ text: 'Menor de todas', color: 'bg-green-100 text-green-700', icon: 'pi-check-circle' });
+        }
+
+        // 3. Proximidade
+        const distMax = Math.abs(maximo_vazao - ultima_vazao);
+        const distMin = Math.abs(minimo_vazao - ultima_vazao);
+        const distAvg = Math.abs(media_vazao - ultima_vazao);
+        const minDist = Math.min(distMax, distMin, distAvg);
+
+        if (minDist === distMax && ultima_vazao !== maximo_vazao) {
+            tags.push({ text: 'Próx. da maior', color: 'bg-pink-100 text-pink-700', icon: 'pi-chart-line' });
+        } else if (minDist === distAvg) {
+            tags.push({ text: 'Próx. da média', color: 'bg-cyan-100 text-cyan-700', icon: 'pi-minus' });
+        } else if (minDist === distMin && ultima_vazao !== minimo_vazao) {
+            tags.push({ text: 'Próx. da menor', color: 'bg-teal-100 text-teal-700', icon: 'pi-chart-line' });
+        }
+
+        return (
+            <div className="flex flex-wrap gap-2 justify-content-end">
+                {tags.map((tag, index) => (
+                    <span key={index} className={`inline-flex align-items-center gap-1 px-2 py-1 border-round text-xs font-bold ${tag.color}`}>
+                        <i className={`pi ${tag.icon}`}></i>
+                        {tag.text}
+                    </span>
+                ))}
             </div>
         );
     };
@@ -294,6 +337,94 @@ export default function GeralPage() {
                     <span className="text-500">espacial</span>
                 </div>
             </div>
+
+            {/* Estatísticas Vazão da Mina */}
+            {dadosVazaoDaMina && (
+                <div className="col-12">
+                    <div className="card">
+                        <h5>Estatísticas de Vazão da Mina</h5>
+                        <div className="grid">
+                            <div className="col-12 md:col-6 lg:col-3">
+                                <div className="surface-card shadow-2 p-3 border-round h-full">
+                                    <div className="flex justify-content-between mb-3">
+                                        <div>
+                                            <span className="block text-500 font-medium mb-3">Última Vazão</span>
+                                            <div className="text-900 font-medium text-xl">{dadosVazaoDaMina.ultima_vazao} m³/h</div>
+                                        </div>
+                                        <div className="flex align-items-center justify-content-center bg-blue-100 border-round" style={{ width: '2.5rem', height: '2.5rem' }}>
+                                            <i className="pi pi-chart-line text-blue-500 text-xl" />
+                                        </div>
+                                    </div>
+                                    <div className="flex align-items-center justify-content-between">
+                                        <div>
+                                            <span className="text-500">Data: </span>
+                                            <span className="text-blue-500 font-medium">{dadosVazaoDaMina.ultima_data.split('-').reverse().join('/')}</span>
+                                        </div>
+                                        {renderVazaoTags(dadosVazaoDaMina)}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-12 md:col-6 lg:col-3">
+                                <div className="surface-card shadow-2 p-3 border-round h-full">
+                                    <div className="flex justify-content-between mb-3">
+                                        <div>
+                                            <span className="block text-500 font-medium mb-3">Média (3 Meses)</span>
+                                            <div className="text-900 font-medium text-xl">{dadosVazaoDaMina.media_3_meses_anteriores.toFixed(2)} m³/h</div>
+                                        </div>
+                                        <div className="flex align-items-center justify-content-center bg-orange-100 border-round" style={{ width: '2.5rem', height: '2.5rem' }}>
+                                            <i className="pi pi-chart-bar text-orange-500 text-xl" />
+                                        </div>
+                                    </div>
+                                    <span className="text-500">Média Geral: </span>
+                                    <span className="text-orange-500 font-medium">{dadosVazaoDaMina.media_vazao.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <div className="col-12 md:col-6 lg:col-3">
+                                <div className="surface-card shadow-2 p-3 border-round h-full">
+                                    <div className="flex justify-content-between mb-3">
+                                        <div>
+                                            <span className="block text-500 font-medium mb-3">Leituras Extremas</span>
+                                            <span className="text-500">Maior leitura: </span>
+                                            <span className="text-orange-500 font-medium">{dadosVazaoDaMina.maximo_vazao} m³/h</span>
+                                        </div>
+                                        <div className="flex align-items-center justify-content-center bg-cyan-100 border-round" style={{ width: '2.5rem', height: '2.5rem' }}>
+                                            <i className="pi pi-sort-alt text-cyan-500 text-xl" />
+                                        </div>
+                                    </div>
+                                    <span className="text-500">Menor leitura: </span>
+                                    <span className="text-cyan-500 font-medium">{dadosVazaoDaMina.minimo_vazao} m³/h</span>
+                                </div>
+                            </div>
+                            <div className="col-12 md:col-6 lg:col-3">
+                                <div className="surface-card shadow-2 p-3 border-round h-full">
+                                    <div className="flex justify-content-between mb-3">
+                                        <div>
+                                            <span className="block text-500 font-medium mb-3">Histórico</span>
+                                            <div className="text-900 font-medium text-xl">{dadosVazaoDaMina.total_registros} Registros</div>
+                                        </div>
+                                        <div className="flex align-items-center justify-content-center bg-purple-100 border-round" style={{ width: '2.5rem', height: '2.5rem' }}>
+                                            <i className="pi pi-calendar-plus text-purple-500 text-xl" />
+                                        </div>
+                                    </div>
+                                    <span className="text-500">Desde: </span>
+                                    <span className="text-purple-500 font-medium">{dadosVazaoDaMina.primeira_data.split('-').reverse().join('/')}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Análise Preditiva IA */}
+                        {analiseIa && (
+                            <div className="mt-4 p-4 surface-50 border-round-xl border-1 surface-border">
+                                <i className="pi pi-sparkles text-purple-600 text-xl"></i>
+                                <span className="font-bold text-900 text-lg">Tendência da vazão nos meses seguintes(IA): </span>
+                                <span className="m-0 text-700 line-height-3 text-justify"> 
+                                    {analiseIa}
+                                </span> 
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Carrossel de Últimos Movimentos RD Lab */}
             <div className="col-12">
