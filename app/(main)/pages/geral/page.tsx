@@ -58,13 +58,31 @@ interface DadosVazaoMina {
     media_vazao: number;
 }
 
+interface EstatisticasVazao {
+    classificacao_tendencia: string;
+    media_variacao_percent: number;
+    maior_variacao_percent: number;
+    menor_variacao_percent: number;
+    mes_atual_nome: string;
+    mes_anterior_nome: string;
+    dados: {
+        tendencia: boolean;
+        contagem: {
+            positivas: number;
+            negativas: number;
+            total: number;
+        };
+    };
+}
+
 export default function GeralPage() {
     const router = useRouter();
     const [contadores, setContadores] = useState<ContadoresData>({ contadoresZeus: 0, contadoresRdLab: 0 });
     const [movimentos, setMovimentos] = useState<MovimentoRdLab[]>([]);
     const [movimentosZeus, setMovimentosZeus] = useState<MovimentoZeus[]>([]);
     const [dadosVazaoDaMina, setDadosVazaoDaMina] = useState<DadosVazaoMina | null>(null);
-    const [analiseIa, setAnaliseIa] = useState<string | null>(null); 
+    const [estatisticasVazao, setEstatisticasVazao] = useState<EstatisticasVazao | null>(null);
+    const [analiseIa, setAnaliseIa] = useState<string | null>(null);
 
     useEffect(() => {
         Swal.fire({
@@ -77,7 +95,7 @@ export default function GeralPage() {
         Promise.all([
             getApiGeralContadores(),
             apiGeralUltimosMovimentosRdLab(),
-            apiGeralUltimosMovimentosZeus(), 
+            apiGeralUltimosMovimentosZeus(),
             apiDadosDaVazaoDaMina()
         ])
             .then(([resContadores, resMovimentos, resZeus, resDadosVazaoDaMina]) => {
@@ -85,7 +103,9 @@ export default function GeralPage() {
                 setMovimentos(resMovimentos.data || []);
                 setMovimentosZeus(resZeus.data || []);
                 setDadosVazaoDaMina(resDadosVazaoDaMina.data?.resultado || null);
+                setEstatisticasVazao(resDadosVazaoDaMina.data?.analisesSazonais || null);
                 setAnaliseIa(JSON.parse(resDadosVazaoDaMina.data.analiseIa.resposta_raw)[0].output || null);
+
                 Swal.close();
             })
             .catch((error) => {
@@ -342,7 +362,9 @@ export default function GeralPage() {
             {dadosVazaoDaMina && (
                 <div className="col-12">
                     <div className="card">
-                        <h5>Estatísticas de Vazão da Mina</h5>
+                        <h5>
+                            Estatísticas de Vazão da Mina
+                        </h5>
                         <div className="grid">
                             <div className="col-12 md:col-6 lg:col-3">
                                 <div className="surface-card shadow-2 p-3 border-round h-full">
@@ -412,16 +434,72 @@ export default function GeralPage() {
                             </div>
                         </div>
 
-                        {/* Análise Preditiva IA */}
-                        {analiseIa && (
-                            <div className="mt-4 p-4 surface-50 border-round-xl border-1 surface-border">
-                                <i className="pi pi-sparkles text-purple-600 text-xl"></i>
-                                <span className="font-bold text-900 text-lg">Tendência da vazão nos meses seguintes(IA): </span>
-                                <span className="m-0 text-700 line-height-3 text-justify"> 
-                                    {analiseIa}
-                                </span> 
-                            </div>
-                        )}
+                        {/* Análise Preditiva IA e Estatísticas de Tendência */}
+                        <div className="grid mt-4">
+                            {/* Análise IA */}
+                            {analiseIa && (
+                                <div className="col-12 lg:col-6">
+                                    <div className="p-4 surface-50 border-round-xl border-1 surface-border h-full">
+                                        <div className="flex align-items-center gap-2 mb-2">
+                                            <i className="pi pi-sparkles text-purple-600 text-xl"></i>
+                                            <span className="font-bold text-900 text-lg">Tendência preditiva da vazão da mina com previsão do clima (IA)</span>
+                                        </div>
+                                        <span className="m-0 text-700 line-height-3 text-justify">
+                                            {analiseIa}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Estatísticas de Tendência */}
+                            {estatisticasVazao && (
+                                <div className="col-12 lg:col-6">
+                                    <div className="p-4 surface-50 border-round-xl border-1 surface-border h-full">
+                                        <div className="flex align-items-center gap-2 mb-3">
+                                            <i className={`pi ${estatisticasVazao.dados.tendencia ? 'pi-arrow-up-right text-green-600' : 'pi-arrow-down-right text-red-600'} text-xl`}></i>
+                                            <span className="font-bold text-900 text-lg">
+                                                Estatísticas de Tendência ({estatisticasVazao.mes_anterior_nome.toLowerCase()}-{estatisticasVazao.mes_atual_nome.toLowerCase()}): {estatisticasVazao.classificacao_tendencia}
+                                            </span>
+                                        </div>
+
+                                        <div className="grid">
+                                            <div className="col-6">
+                                                <div className="flex flex-column gap-1">
+                                                    <span className="text-500 text-sm">Variação Média</span>
+                                                    <span className={`font-bold ${estatisticasVazao.media_variacao_percent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        {estatisticasVazao.media_variacao_percent.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="col-6">
+                                                <div className="flex flex-column gap-1">
+                                                    <span className="text-500 text-sm">Variações Positivas</span>
+                                                    <span className="font-bold text-900">
+                                                        {estatisticasVazao.dados.contagem.positivas} de {estatisticasVazao.dados.contagem.total} meses
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="col-6 mt-2">
+                                                <div className="flex flex-column gap-1">
+                                                    <span className="text-500 text-sm">Maior Variação</span>
+                                                    <span className="font-bold text-green-600">
+                                                        +{estatisticasVazao.maior_variacao_percent.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="col-6 mt-2">
+                                                <div className="flex flex-column gap-1">
+                                                    <span className="text-500 text-sm">Menor Variação</span>
+                                                    <span className="font-bold text-red-600">
+                                                        {estatisticasVazao.menor_variacao_percent.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
