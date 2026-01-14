@@ -20,3 +20,7 @@ export const apiGeralUltimosMovimentosZeus = () => {
 export const apiDadosDaVazaoDaMina = () => {
     return rota.get("/api/vazao-mina/estatisticas");
 };
+
+export const apiPiozometrosAtrasados = () => {
+    return rota.get("/api/inspecao-piezometro-freq/atrasados");
+};

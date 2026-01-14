@@ -2,9 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getApiGeralContadores, apiGeralUltimosMovimentosRdLab, apiGeralUltimosMovimentosZeus, apiDadosDaVazaoDaMina } from "@/service/visaoGeralApis";
+import { getApiGeralContadores, apiGeralUltimosMovimentosRdLab, apiGeralUltimosMovimentosZeus, apiDadosDaVazaoDaMina, apiPiozometrosAtrasados } from "@/service/visaoGeralApis";
 import Swal from "sweetalert2";
 import { Carousel } from 'primereact/carousel';
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
+import { Tag } from 'primereact/tag';
 
 interface ContadoresData {
     contadoresZeus: number;
@@ -75,6 +78,16 @@ interface EstatisticasVazao {
     };
 }
 
+interface PiezometroAtrasado {
+    cdPiezometro: number;
+    nmPiezometro: string;
+    frequenciaDescricao: string;
+    dtUltimaInspecao: string;
+    origem: string;
+    situacao: string;
+    diasAtrasado: number;
+}
+
 export default function GeralPage() {
     const router = useRouter();
     const [contadores, setContadores] = useState<ContadoresData>({ contadoresZeus: 0, contadoresRdLab: 0 });
@@ -82,6 +95,7 @@ export default function GeralPage() {
     const [movimentosZeus, setMovimentosZeus] = useState<MovimentoZeus[]>([]);
     const [dadosVazaoDaMina, setDadosVazaoDaMina] = useState<DadosVazaoMina | null>(null);
     const [estatisticasVazao, setEstatisticasVazao] = useState<EstatisticasVazao | null>(null);
+    const [atrasados, setAtrasados] = useState<PiezometroAtrasado[]>([]);
     const [analiseIa, setAnaliseIa] = useState<string | null>(null);
 
     useEffect(() => {
@@ -96,15 +110,24 @@ export default function GeralPage() {
             getApiGeralContadores(),
             apiGeralUltimosMovimentosRdLab(),
             apiGeralUltimosMovimentosZeus(),
-            apiDadosDaVazaoDaMina()
+            apiDadosDaVazaoDaMina(),
+            apiPiozometrosAtrasados()
         ])
-            .then(([resContadores, resMovimentos, resZeus, resDadosVazaoDaMina]) => {
+            .then(([resContadores, resMovimentos, resZeus, resDadosVazaoDaMina, resAtrasados]) => {
                 setContadores(resContadores.data);
                 setMovimentos(resMovimentos.data || []);
                 setMovimentosZeus(resZeus.data || []);
                 setDadosVazaoDaMina(resDadosVazaoDaMina.data?.resultado || null);
                 setEstatisticasVazao(resDadosVazaoDaMina.data?.analisesSazonais || null);
                 setAnaliseIa(JSON.parse(resDadosVazaoDaMina.data.analiseIa.resposta_raw)[0].output || null);
+
+                const normalizedAtrasados = (resAtrasados.data || []).map((item: PiezometroAtrasado) => {
+                    if (item.frequenciaDescricao?.toUpperCase() === 'NÃO DEFINIDA') {
+                        return { ...item, situacao: 'NÃO DEFINIDA' };
+                    }
+                    return item;
+                });
+                setAtrasados(normalizedAtrasados);
 
                 Swal.close();
             })
@@ -503,6 +526,61 @@ export default function GeralPage() {
                     </div>
                 </div>
             )}
+
+            {/* Tabela de Piezômetros Atrasados */}
+            <div className="col-12">
+                <div className="card">
+                    <h5>Inspeções de Piezômetros</h5>
+                    <DataTable
+                        value={atrasados}
+                        paginator
+                        rows={10}
+                        dataKey="cdPiezometro"
+                        emptyMessage="Nenhum piezômetro encontrado."
+                        responsiveLayout="stack"
+                        className="p-datatable-sm"
+                        sortMode="multiple"
+                        filterDisplay="menu"
+                    >
+                        <Column field="nmPiezometro" header="Piezômetro" sortable filter filterPlaceholder="Filtrar por nome" style={{ minWidth: '14rem' }}></Column>
+                        <Column field="frequenciaDescricao" header="Frequência" sortable filter={false} showFilterMenu={false} style={{ minWidth: '10rem' }}></Column>
+                        <Column
+                            field="dtUltimaInspecao"
+                            header="Última Inspeção"
+                            sortable
+                            filter={false}
+                            showFilterMenu={false}
+                            style={{ minWidth: '10rem' }}
+                            body={(rowData: PiezometroAtrasado) => {
+                                return rowData.dtUltimaInspecao ? rowData.dtUltimaInspecao.split('T')[0].split('-').reverse().join('/') : '-';
+                            }}
+                        ></Column>
+                        <Column
+                            field="situacao"
+                            header="Situação"
+                            sortable
+                            style={{ minWidth: '8rem' }}
+                            body={(rowData: PiezometroAtrasado) => {
+                                if (rowData.situacao.toUpperCase() === 'NÃO DEFINIDA') {
+                                    return <Tag value="NÃO DEFINIDA" style={{ backgroundColor: '#94a3b8', color: '#ffffff' }} />;
+                                }
+                                const severity = rowData.situacao.toLowerCase() === 'em dia' ? 'success' : 'danger';
+                                return <Tag value={rowData.situacao.toUpperCase()} severity={severity} />;
+                            }}
+                        ></Column>
+                        <Column
+                            field="diasAtrasado"
+                            header="Dias Atrasado"
+                            sortable
+                            style={{ minWidth: '8rem' }}
+                            body={(rowData: PiezometroAtrasado) => {
+                                const color = rowData.diasAtrasado > 0 ? 'text-red-600 font-bold' : 'text-green-600';
+                                return <span className={color}>{rowData.diasAtrasado}</span>;
+                            }}
+                        ></Column>
+                    </DataTable>
+                </div>
+            </div>
 
             {/* Carrossel de Últimos Movimentos RD Lab */}
             <div className="col-12">
