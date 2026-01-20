@@ -102,6 +102,50 @@ export default function GraficosAnalise({ dados, ehRelatorio = false }: Propried
             )}
 
             {/* Renderização dos Gráficos */}
+
+            {/* 
+                Container auxiliar apenas para exportação:
+                - Renderiza todos os gráficos em grid, sem Carousel
+                - Fica fora da tela, mas com DOM e canvas prontos para captura
+            */}
+            {listaGraficos.length > 0 && (
+                <div
+                    id="analises-export"
+                    style={{
+                        position: 'fixed',
+                        left: '-10000px',
+                        top: 0,
+                        width: '1400px',
+                        opacity: 0,
+                        pointerEvents: 'none',
+                        zIndex: -1,
+                        visibility: 'hidden',
+                    }}
+                >
+                    <div className="grid" style={{ width: '1400px' }}>
+                        {listaGraficos.map((grafico, index) => (
+                            <div key={`export-${index}`} className="col-12 mb-4" style={{ width: '100%' }}>
+                                <div className="p-2" style={{ width: '100%' }}>
+                                    <div className="chart-container surface-card p-3 shadow-2 border-round relative" style={{ width: '100%', minHeight: '400px' }}>
+                                        <div className="chart-header flex justify-content-between align-items-start mb-3" style={{ minHeight: '60px' }}>
+                                            <div>
+                                                <div className="text-xl font-bold text-900">{grafico.titulo}</div>
+                                                <div className={`text-sm ${grafico.temLegislacao ? 'text-600' : 'text-orange-500'}`}>
+                                                    {grafico.temLegislacao && <i className="pi pi-check-circle text-green-500 mr-1 text-xs"></i>}
+                                                    {!grafico.temLegislacao && <i className="pi pi-info-circle mr-1 text-xs"></i>}
+                                                    {grafico.subtitulo}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <Chart type="line" data={grafico.dadosGrafico} options={grafico.opcoes} plugins={[pluginBackground]} height="300px" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div id="analises-scrap">
                 {listaGraficos.length > 0 ? (
                     ehRelatorio ? (
