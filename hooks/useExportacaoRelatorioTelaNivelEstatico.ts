@@ -193,15 +193,46 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
 
         try {
             const html2pdf = (await import("html2pdf.js")).default;
+            const base64Logo = await convertImageToBase64('/assets/logo-melhor.jpg');
+
             const opcoes = {
-                margin: 1,
+                margin: [0.6, 0.5, 0.6, 0.5] as [number, number, number, number],
                 filename: `relatorio-piezometro-${obterNomePiezometro()}.pdf`,
                 image: { type: "jpeg" as const, quality: 0.98 },
                 html2canvas: { scale: 2, letterRendering: true, useCORS: true },
                 jsPDF: { unit: "in", format: "letter", orientation: "landscape" as const },
             };
 
-            await html2pdf().from(containerImpressao).set(opcoes).save();
+            await html2pdf().from(containerImpressao).set(opcoes).toPdf().get('pdf').then((pdf: any) => {
+                const totalPages = pdf.internal.getNumberOfPages();
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+
+                for (let i = 1; i <= totalPages; i++) {
+                    pdf.setPage(i);
+
+                    if (base64Logo) {
+                        const imgWidth = 2.0;
+                        const imgHeight = 0.56;
+                        pdf.addImage(base64Logo, 'JPEG', 0.5, 0.1, imgWidth, imgHeight);
+                    }
+
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(51, 51, 51);
+                    const footerText1 = "Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil";
+                    const footerText2 = "+55 48 3431 9444   www.riodeserto.com.br";
+
+                    const textWidth1 = pdf.getStringUnitWidth(footerText1) * 8 / 72;
+                    const textWidth2 = pdf.getStringUnitWidth(footerText2) * 8 / 72;
+
+                    const x1 = (pageWidth - textWidth1) / 2;
+                    const x2 = (pageWidth - textWidth2) / 2;
+
+                    pdf.text(footerText1, x1, pageHeight - 0.4);
+                    pdf.text(footerText2, x2, pageHeight - 0.25);
+                }
+                pdf.save(opcoes.filename);
+            });
         } catch (erro) {
             console.error("Erro ao gerar PDF:", erro);
             Swal.fire({ icon: 'error', title: 'Erro ao gerar PDF' });
