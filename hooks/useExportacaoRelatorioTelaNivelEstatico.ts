@@ -45,6 +45,22 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
         });
     };
 
+    const convertImageToBase64 = async (url: string): Promise<string> => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.error("Erro ao converter imagem:", error);
+            return "";
+        }
+    };
+
     const aoGerarPdf = async () => {
         const canvasGrafico = chartRef.current?.getCanvas();
         const elementoAnaliseIA = document.getElementById("textoApareceNoPdf");
@@ -103,7 +119,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
         if (fotosInspecao && fotosInspecao.length > 0) {
             const containerFotos = document.createElement('div');
             containerFotos.style.marginTop = '30px';
-            containerFotos.style.breakInside = 'avoid'; 
+            containerFotos.style.breakInside = 'avoid';
 
             const tituloFotos = document.createElement('h4');
             tituloFotos.textContent = 'Fotos de Inspeção';
@@ -129,7 +145,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
             });
             thead.appendChild(trHeader);
             tabela.appendChild(thead);
-            
+
             const tbody = document.createElement('tbody');
             const fotosBase64 = await Promise.all(fotosInspecao.map(foto => urlToBase64(foto.caminhoCompleto)));
 
@@ -164,7 +180,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                 imgFoto.style.height = 'auto';
                 imgFoto.style.display = 'block';
                 imgFoto.style.margin = '0 auto';
-                
+
                 // Correção do erro de tipo: passar string em caso de falha
                 tr.appendChild(criarCelula(fotosBase64[index] ? imgFoto : 'Erro ao carregar'));
 
@@ -213,7 +229,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                 const dataObj = new Date(foto.dataInsercao);
                 const dataFormatada = dataObj.toLocaleDateString('pt-BR');
                 const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                const imgTag = fotosBase64[index] 
+                const imgTag = fotosBase64[index]
                     ? `<img src="${fotosBase64[index]}" style="width: 340px; height: auto; display: block; margin: 0 auto;" />`
                     : 'Erro ao carregar imagem';
 
@@ -262,12 +278,32 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
 
         const opcoes = {
             orientation: 'landscape' as const,
-            margins: { top: 720, right: 720, bottom: 720, left: 720 },
+            margins: { top: 720, right: 720, bottom: 720, left: 720, header: 360, footer: 360 },
+            header: true,
+            footer: true,
+            headerType: 'default' as const,
+            footerType: 'default' as const
         };
 
         try {
             const htmlToDocx = (await import('html-to-docx')).default;
-            const bufferArquivo = await htmlToDocx(htmlString, null, opcoes);
+
+            const base64Logo = await convertImageToBase64('/assets/logo-melhor.jpg');
+
+            const headerHTML = `
+                <div style="width: 100%; text-align: left;">
+                    <img src="${base64Logo}" alt="Rio Deserto" style="height: 75px; width: 264px;" />
+                </div>
+            `;
+
+            const footerHTML = `
+                <div style="width: 100%; text-align: center; font-family: Arial, sans-serif; font-size: 10px; color: #333;">
+                    <p style="text-align: center; width: 100%; margin: 0;">Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil</p>
+                    <p style="text-align: center; width: 100%; margin: 0;">+55 48 3431 9444   <strong>www.riodeserto.com.br</strong></p>
+                </div>
+            `;
+
+            const bufferArquivo = await htmlToDocx(htmlString, headerHTML, opcoes, footerHTML);
             saveAs(bufferArquivo as Blob, `relatorio-piezometro-${obterNomePiezometro()}.docx`);
         } catch (erro) {
             console.error("Erro ao gerar Word:", erro);
