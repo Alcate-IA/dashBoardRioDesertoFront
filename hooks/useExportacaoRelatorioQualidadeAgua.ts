@@ -18,6 +18,22 @@ export const useExportacaoRelatorioQualidadeAgua = (
     pontoSelecionado: number | null
 ) => {
 
+    const convertImageToBase64 = async (url: string): Promise<string> => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.error("Erro ao converter imagem:", error);
+            return "";
+        }
+    };
+
     const gerarPDF = async () => {
         const elementoAnaliseIA = document.getElementById("textoApareceNoPdf");
         const containerGraficos = document.getElementById("analises-scrap");
@@ -187,12 +203,32 @@ export const useExportacaoRelatorioQualidadeAgua = (
 
         const opcoesWord = {
             orientation: 'landscape' as const,
-            margins: { top: 720, right: 720, bottom: 720, left: 720 },
+            margins: { top: 720, right: 720, bottom: 720, left: 720, header: 360, footer: 360 },
+            header: true,
+            footer: true,
+            headerType: 'default' as const,
+            footerType: 'default' as const
         };
 
         try {
             const htmlToDocx = (await import('html-to-docx')).default;
-            const bufferArquivo = await htmlToDocx(stringHtmlCompleta, null, opcoesWord);
+
+            const base64Logo = await convertImageToBase64('/assets/logo-melhor.jpg');
+
+            const headerHTML = `
+                <div style="width: 100%; text-align: left;">
+                    <img src="${base64Logo}" alt="Rio Deserto" style="height: 75px; width: 264px;" />
+                </div>
+            `;
+
+            const footerHTML = `
+                <div style="width: 100%; text-align: center; font-family: Arial, sans-serif; font-size: 10px; color: #333;">
+                    <p style="text-align: center; width: 100%; margin: 0;">Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil</p>
+                    <p style="text-align: center; width: 100%; margin: 0;">+55 48 3431 9444   <strong>www.riodeserto.com.br</strong></p>
+                </div>
+            `;
+
+            const bufferArquivo = await htmlToDocx(stringHtmlCompleta, headerHTML, opcoesWord, footerHTML);
             saveAs(bufferArquivo as Blob, "relatorio-qualidade.docx");
         } catch (error) {
             console.error("Erro ao gerar Word:", error);
