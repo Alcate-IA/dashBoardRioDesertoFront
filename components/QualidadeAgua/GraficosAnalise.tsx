@@ -29,6 +29,18 @@ export default function GraficosAnalise({ dados, ehRelatorio = false }: Propried
         { breakpoint: '767px', numVisible: 1, numScroll: 1 }
     ];
 
+    const pluginBackground = {
+        id: 'customCanvasBackgroundColor',
+        beforeDraw: (chart: any) => {
+            const { ctx } = chart;
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = '#1f2937';
+            ctx.fillRect(0, 0, chart.width, chart.height);
+            ctx.restore();
+        }
+    };
+
     const templateGrafico = (grafico: any) => {
         return (
             <div className="p-2 h-full w-full">
@@ -43,7 +55,7 @@ export default function GraficosAnalise({ dados, ehRelatorio = false }: Propried
                             </div>
                         </div>
                     </div>
-                    <Chart type="line" data={grafico.dadosGrafico} options={grafico.opcoes} height="300px" />
+                    <Chart type="line" data={grafico.dadosGrafico} options={grafico.opcoes} plugins={[pluginBackground]} height="300px" />
                 </div>
             </div>
         );

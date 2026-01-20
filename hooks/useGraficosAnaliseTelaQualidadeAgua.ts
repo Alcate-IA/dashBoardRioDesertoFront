@@ -211,7 +211,7 @@ export const useGraficosAnaliseTelaQualidadeAgua = (dados: DadosQualidadeAgua) =
 
                 if (limites.max !== undefined) {
                     datasets.push({
-                        label: `Máx (${nomeLegislacao.substring(0, 15)}...)`,
+                        label: `Máx (${nomeLegislacao})`,
                         data: new Array(datasFormatadas.length).fill(limites.max),
                         fill: false,
                         borderColor: corLimite,
@@ -226,7 +226,7 @@ export const useGraficosAnaliseTelaQualidadeAgua = (dados: DadosQualidadeAgua) =
 
                 if (limites.min !== undefined) {
                     datasets.push({
-                        label: `Mín (${nomeLegislacao.substring(0, 15)}...)`,
+                        label: `Mín (${nomeLegislacao})`,
                         data: new Array(datasFormatadas.length).fill(limites.min),
                         fill: false,
                         borderColor: corLimite,
@@ -255,6 +255,7 @@ export const useGraficosAnaliseTelaQualidadeAgua = (dados: DadosQualidadeAgua) =
                         display: true,
                         labels: {
                             usePointStyle: false,
+                            color: '#FFFFFF',
                             generateLabels: function (chart: any) {
                                 const datasets = chart.data.datasets;
                                 return datasets.map((dataset: any, i: number) => {
@@ -266,7 +267,8 @@ export const useGraficosAnaliseTelaQualidadeAgua = (dados: DadosQualidadeAgua) =
                                         lineWidth: dataset.borderWidth || 2,
                                         lineDash: dataset.borderDash || [],
                                         hidden: meta.hidden,
-                                        datasetIndex: i
+                                        datasetIndex: i,
+                                        fontColor: '#FFFFFF'
                                     };
                                 });
                             }
