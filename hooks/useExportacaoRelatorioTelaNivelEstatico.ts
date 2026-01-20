@@ -196,7 +196,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
             const base64Logo = await convertImageToBase64('/assets/logo-melhor.jpg');
 
             const opcoes = {
-                margin: [0.6, 0.5, 0.6, 0.5] as [number, number, number, number],
+                margin: [0.8, 0.5, 0.8, 0.5] as [number, number, number, number],
                 filename: `relatorio-piezometro-${obterNomePiezometro()}.pdf`,
                 image: { type: "jpeg" as const, quality: 0.98 },
                 html2canvas: { scale: 2, letterRendering: true, useCORS: true },

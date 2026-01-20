@@ -18,6 +18,29 @@ export const useExportacaoRelatorioQualidadeAgua = (
     pontoSelecionado: number | null
 ) => {
 
+    /**
+     * Obtém apenas os containers de gráficos "válidos" evitando
+     * clones gerados pelo Carousel do PrimeReact (que usa itens clonados
+     * com a classe `p-carousel-item-cloned` para o modo circular).
+     */
+    const obterContainersGraficos = (raiz: HTMLElement): HTMLElement[] => {
+        const carouselContent = raiz.querySelector('.p-carousel-items-content');
+
+        if (carouselContent) {
+            const itensOriginais = carouselContent.querySelectorAll(
+                '.p-carousel-item:not(.p-carousel-item-cloned) .chart-container'
+            );
+
+            if (itensOriginais.length > 0) {
+                return Array.from(itensOriginais) as HTMLElement[];
+            }
+        }
+
+        // Fallback: grid simples (modo relatório) ou, se por algum motivo
+        // a estrutura do Carousel mudar e não encontrarmos o content.
+        return Array.from(raiz.querySelectorAll('.chart-container')) as HTMLElement[];
+    };
+
     const convertImageToBase64 = async (url: string): Promise<string> => {
         try {
             const response = await fetch(url);
@@ -34,9 +57,77 @@ export const useExportacaoRelatorioQualidadeAgua = (
         }
     };
 
+    const aguardarProximoFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    /**
+     * Captura o container completo do gráfico (header + gráfico) como imagem.
+     * Temporariamente move o container para dentro da viewport para captura correta.
+     */
+    const capturarContainerCompletoComoImagem = async (container: HTMLElement): Promise<string> => {
+        const html2canvas = (await import('html2canvas')).default;
+        
+        // Salva estilos originais
+        const estiloOriginal = {
+            position: container.style.position,
+            left: container.style.left,
+            top: container.style.top,
+            opacity: container.style.opacity,
+            visibility: container.style.visibility,
+            zIndex: container.style.zIndex,
+            pointerEvents: container.style.pointerEvents,
+            display: container.style.display
+        };
+        
+        // Move temporariamente para dentro da viewport para captura
+        container.style.position = 'fixed';
+        container.style.left = '0px';
+        container.style.top = '0px';
+        container.style.opacity = '1';
+        container.style.visibility = 'visible';
+        container.style.zIndex = '9999';
+        container.style.pointerEvents = 'none';
+        container.style.display = 'block';
+        
+        // Aguarda renderização
+        await aguardarProximoFrame();
+        await aguardarProximoFrame();
+        
+        try {
+            const rect = container.getBoundingClientRect();
+            const canvas = await html2canvas(container, {
+                backgroundColor: '#ffffff',
+                scale: 2, // Qualidade melhor
+                useCORS: true,
+                logging: false,
+                width: rect.width || 1200,
+                height: rect.height || 600,
+                x: 0,
+                y: 0
+            });
+            
+            // Converte para JPEG (mais leve que PNG)
+            return canvas.toDataURL('image/jpeg', 0.9);
+        } catch (erro) {
+            console.error('Erro ao capturar container:', erro);
+            return '';
+        } finally {
+            // Restaura estilos originais
+            container.style.position = estiloOriginal.position;
+            container.style.left = estiloOriginal.left;
+            container.style.top = estiloOriginal.top;
+            container.style.opacity = estiloOriginal.opacity;
+            container.style.visibility = estiloOriginal.visibility;
+            container.style.zIndex = estiloOriginal.zIndex;
+            container.style.pointerEvents = estiloOriginal.pointerEvents;
+            container.style.display = estiloOriginal.display;
+        }
+    };
+
     const gerarPDF = async () => {
         const elementoAnaliseIA = document.getElementById("textoApareceNoPdf");
-        const containerGraficos = document.getElementById("analises-scrap");
+        const containerGraficos =
+            (document.getElementById("analises-export") as HTMLElement | null) ||
+            (document.getElementById("analises-scrap") as HTMLElement | null);
 
         if (!elementoAnaliseIA || !containerGraficos) {
             console.error("Não foi possível encontrar os elementos para gerar o PDF.");
@@ -48,104 +139,143 @@ export const useExportacaoRelatorioQualidadeAgua = (
             return;
         }
 
-        const containerImpressaoFinal = document.createElement("div");
-        containerImpressaoFinal.style.padding = "0.5in";
-        containerImpressaoFinal.style.width = "10in";
-        containerImpressaoFinal.style.backgroundColor = "#fff";
-        containerImpressaoFinal.style.margin = "0 auto";
-
         const pontoEncontrado = pontos.find(p => p.value === pontoSelecionado);
         const nomeDoPonto = pontoEncontrado ? pontoEncontrado.label : 'Ponto Selecionado';
 
-        const tituloPonto = document.createElement("h3");
-        tituloPonto.textContent = `${nomeDoPonto}:`;
-        tituloPonto.style.marginBottom = "20px";
-        tituloPonto.style.color = "#000";
+        try {
+            const base64Logo = await convertImageToBase64('/assets/logo-melhor.jpg');
+            const { jsPDF } = await import('jspdf');
 
-        containerImpressaoFinal.appendChild(tituloPonto);
+            const pdf = new jsPDF({ unit: 'in', format: 'letter', orientation: 'landscape' });
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
 
-        const textoAnalise = (elementoAnaliseIA as HTMLElement).innerText;
-        const containerAnalise = document.createElement('div');
-        containerAnalise.style.marginBottom = '20px';
-        containerAnalise.style.width = '100%';
+            const margemX = 0.5;
+            const topoConteudoY = 1.0; // espaço para header
+            const maxYTexto = pageHeight - 0.8; // espaço pro rodapé
 
-        const linhas = textoAnalise.split('\n');
-        linhas.forEach(linha => {
-            const p = document.createElement('p');
-            p.textContent = linha || '\u00A0';
-            p.style.color = 'black';
-            p.style.margin = '0';
-            p.style.lineHeight = '1.5';
-            containerAnalise.appendChild(p);
-        });
-        containerImpressaoFinal.appendChild(containerAnalise);
+            const desenharHeaderFooter = () => {
+                if (base64Logo) {
+                    const imgWidth = 2.0;
+                    const imgHeight = 0.56;
+                    pdf.addImage(base64Logo, 'JPEG', margemX, 0.1, imgWidth, imgHeight);
+                }
 
-        const containersIndividuais = containerGraficos.querySelectorAll('.chart-container');
+                pdf.setFontSize(8);
+                pdf.setTextColor(51, 51, 51);
+                const footerText1 = "Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil";
+                const footerText2 = "+55 48 3431 9444   www.riodeserto.com.br";
 
-        containersIndividuais.forEach((container) => {
-            const cloneContainer = container.cloneNode(true) as HTMLElement;
+                const textWidth1 = pdf.getStringUnitWidth(footerText1) * 8 / 72;
+                const textWidth2 = pdf.getStringUnitWidth(footerText2) * 8 / 72;
+                pdf.text(footerText1, (pageWidth - textWidth1) / 2, pageHeight - 0.4);
+                pdf.text(footerText2, (pageWidth - textWidth2) / 2, pageHeight - 0.25);
+            };
 
-            cloneContainer.classList.remove('h-full');
-            cloneContainer.style.height = 'auto';
-            cloneContainer.style.width = '100%';
-            cloneContainer.style.display = 'block';
+            // Página(s) do texto
+            desenharHeaderFooter();
+            pdf.setTextColor(0, 0, 0);
+            pdf.setFontSize(14);
+            pdf.text(`${nomeDoPonto}:`, margemX, topoConteudoY);
 
-            const canvasOriginal = container.querySelector('canvas');
-            const canvasClonado = cloneContainer.querySelector('canvas');
+            const textoAnalise = (elementoAnaliseIA as HTMLElement).innerText || '';
+            const linhas = textoAnalise.split('\n');
 
-            if (canvasOriginal && canvasClonado) {
-                const imagem = document.createElement('img');
-                imagem.src = canvasOriginal.toDataURL("image/png");
-                imagem.style.width = '100%';
-                imagem.style.height = 'auto';
-                imagem.style.display = 'block';
-                const pai = canvasClonado.parentNode as HTMLElement;
-                if (pai) {
-                    pai.replaceChild(imagem, canvasClonado);
-                    pai.style.height = 'auto';
-                    pai.style.width = '100%';
-                    pai.style.position = 'static';
-                    pai.className = '';
+            pdf.setFontSize(10);
+            const alturaLinha = 0.18;
+            let y = topoConteudoY + 0.35;
+
+            for (const linha of linhas) {
+                const texto = linha?.length ? linha : ' ';
+                const partes = pdf.splitTextToSize(texto, pageWidth - margemX * 2);
+
+                for (const parte of partes) {
+                    if (y > maxYTexto) {
+                        pdf.addPage();
+                        desenharHeaderFooter();
+                        pdf.setTextColor(0, 0, 0);
+                        pdf.setFontSize(10);
+                        y = topoConteudoY;
+                    }
+                    pdf.text(parte, margemX, y);
+                    y += alturaLinha;
                 }
             }
 
-            const wrapper = document.createElement('div');
-            wrapper.style.width = '100%';
-            wrapper.style.display = 'flex';
-            wrapper.style.justifyContent = 'center';
-            wrapper.style.alignItems = 'center';
-            wrapper.style.flexDirection = 'column';
-            wrapper.style.paddingTop = '40px';
-            wrapper.style.paddingBottom = '40px';
-            wrapper.style.pageBreakBefore = 'always';
-            wrapper.style.pageBreakInside = 'avoid';
+            // Gráficos: 2 por página, capturando o container completo (header + gráfico)
+            const containersIndividuais = obterContainersGraficos(containerGraficos);
+            const imagensGraficos: Array<{ data: string; width: number; height: number }> = [];
 
-            cloneContainer.style.width = '90%';
-            cloneContainer.style.margin = '0';
-            cloneContainer.style.textAlign = 'left';
+            // Primeiro, captura todas as imagens
+            for (let i = 0; i < containersIndividuais.length; i++) {
+                const container = containersIndividuais[i];
 
-            wrapper.appendChild(cloneContainer);
-            containerImpressaoFinal.appendChild(wrapper);
-        });
+                // Dá um respiro entre capturas (evita travar navegador/IDE)
+                // eslint-disable-next-line no-await-in-loop
+                await aguardarProximoFrame();
 
-        try {
-            const html2pdf = (await import("html2pdf.js")).default;
+                const imgData = await capturarContainerCompletoComoImagem(container);
+                if (!imgData || imgData.length < 100) continue; // Valida se tem conteúdo
 
-            const configuracoes = {
-                margin: 0,
-                filename: "relatorio-qualidade.pdf",
-                image: { type: "jpeg" as const, quality: 0.98 },
-                html2canvas: {
-                    scale: 2,
-                    letterRendering: true,
-                    useCORS: true,
-                    windowWidth: 1400
-                },
-                jsPDF: { unit: "in", format: "letter", orientation: "landscape" as const },
-                pagebreak: { mode: ['css', 'legacy'] }
-            };
+                // Obtém dimensões da imagem
+                const img = new Image();
+                img.src = imgData;
+                await new Promise((resolve) => {
+                    img.onload = resolve;
+                    img.onerror = resolve; // Continua mesmo se falhar
+                });
 
-            html2pdf().from(containerImpressaoFinal).set(configuracoes).save();
+                imagensGraficos.push({
+                    data: imgData,
+                    width: img.width || 1200,
+                    height: img.height || 600
+                });
+            }
+
+            // Agora adiciona ao PDF: 2 gráficos por página
+            const larguraDisponivel = pageWidth - margemX * 2;
+            const alturaTotalDisponivel = pageHeight - topoConteudoY - 0.9;
+            const espacoEntreGraficos = 0.2; // Espaço entre os dois gráficos (em polegadas)
+            const alturaPorGrafico = (alturaTotalDisponivel - espacoEntreGraficos) / 2;
+
+            for (let i = 0; i < imagensGraficos.length; i += 2) {
+                pdf.addPage();
+                desenharHeaderFooter();
+
+                // Primeiro gráfico (topo)
+                const img1 = imagensGraficos[i];
+                const proporcao1 = img1.width / img1.height;
+                let w1 = larguraDisponivel;
+                let h1 = alturaPorGrafico;
+                
+                if (proporcao1 > larguraDisponivel / alturaPorGrafico) {
+                    h1 = larguraDisponivel / proporcao1;
+                } else {
+                    w1 = alturaPorGrafico * proporcao1;
+                }
+                
+                const y1 = topoConteudoY;
+                pdf.addImage(img1.data, 'JPEG', margemX, y1, w1, h1, undefined, 'FAST');
+
+                // Segundo gráfico (se existir)
+                if (i + 1 < imagensGraficos.length) {
+                    const img2 = imagensGraficos[i + 1];
+                    const proporcao2 = img2.width / img2.height;
+                    let w2 = larguraDisponivel;
+                    let h2 = alturaPorGrafico;
+                    
+                    if (proporcao2 > larguraDisponivel / alturaPorGrafico) {
+                        h2 = larguraDisponivel / proporcao2;
+                    } else {
+                        w2 = alturaPorGrafico * proporcao2;
+                    }
+                    
+                    const y2 = y1 + h1 + espacoEntreGraficos;
+                    pdf.addImage(img2.data, 'JPEG', margemX, y2, w2, h2, undefined, 'FAST');
+                }
+            }
+
+            pdf.save("relatorio-qualidade.pdf");
         } catch (erro) {
             console.error("Erro ao gerar PDF:", erro);
             Swal.fire({
@@ -158,7 +288,9 @@ export const useExportacaoRelatorioQualidadeAgua = (
 
     const gerarWord = async () => {
         const elementoAnaliseIA = document.getElementById("textoApareceNoPdf");
-        const containerGraficos = document.getElementById("analises-scrap");
+        const containerGraficos =
+            (document.getElementById("analises-export") as HTMLElement | null) ||
+            (document.getElementById("analises-scrap") as HTMLElement | null);
 
         if (!elementoAnaliseIA || !containerGraficos) {
             console.error("Não foi possível encontrar os elementos para gerar o Word.");
@@ -174,19 +306,20 @@ export const useExportacaoRelatorioQualidadeAgua = (
         const nomeDoPonto = pontoEncontrado ? pontoEncontrado.label : 'Ponto Selecionado';
 
         let htmlGraficos = '';
-        const containersIndividuais = containerGraficos.querySelectorAll('.chart-container');
+        const containersIndividuais = obterContainersGraficos(containerGraficos);
 
-        containersIndividuais.forEach((container) => {
-            const canvas = container.querySelector('canvas');
-            if (canvas) {
-                const dataUrlGrafico = canvas.toDataURL("image/png");
-                htmlGraficos += `
-                    <div style="margin-top: 40px; margin-bottom: 40px; text-align: center;">
-                        <img src="${dataUrlGrafico}" style="width: 600px;" />
-                    </div>
-                `;
-            }
-        });
+        for (const container of containersIndividuais) {
+            // eslint-disable-next-line no-await-in-loop
+            await aguardarProximoFrame();
+            const imgData = await capturarContainerCompletoComoImagem(container);
+            if (!imgData || imgData.length < 100) continue; // Valida se tem conteúdo
+            
+            htmlGraficos += `
+                <div style="margin-top: 40px; margin-bottom: 40px; text-align: center; border: none; padding: 0;">
+                    <img src="${imgData}" style="max-width: 600px; width: 100%; height: auto; display: block; margin: 0 auto; border: none; box-shadow: none;" />
+                </div>
+            `;
+        }
 
         const textoAnalise = (elementoAnaliseIA as HTMLElement).innerText;
         const linhasAnalise = textoAnalise.split('\n').map(linha => `<p style="margin: 0;">${linha || '&nbsp;'}</p>`).join('');
