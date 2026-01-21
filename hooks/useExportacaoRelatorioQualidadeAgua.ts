@@ -17,6 +17,14 @@ export const useExportacaoRelatorioQualidadeAgua = (
     pontos: PontoMonitoramento[],
     pontoSelecionado: number | null
 ) => {
+    const escaparHtml = (valor: string) =>
+        valor
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
 
     /**
      * Obtém apenas os containers de gráficos "válidos" evitando
@@ -321,12 +329,15 @@ export const useExportacaoRelatorioQualidadeAgua = (
             `;
         }
 
-        const textoAnalise = (elementoAnaliseIA as HTMLElement).innerText;
-        const linhasAnalise = textoAnalise.split('\n').map(linha => `<p style="margin: 0;">${linha || '&nbsp;'}</p>`).join('');
+        const textoAnalise = (elementoAnaliseIA as HTMLElement).innerText || '';
+        const linhasAnalise = textoAnalise
+            .split('\n')
+            .map((linha) => `<p style="margin: 0;">${linha ? escaparHtml(linha) : '&nbsp;'}</p>`)
+            .join('');
 
         const stringHtmlCompleta = `
             <div style="font-family: Arial; padding: 20px;">
-                <h3 style="color: #000; margin-bottom: 20px;">${nomeDoPonto}:</h3>
+                <h3 style="color: #000; margin-bottom: 20px;">${escaparHtml(nomeDoPonto)}:</h3>
                 <div style="margin-bottom: 20px; color: #000;">
                     ${linhasAnalise}
                 </div>
@@ -361,6 +372,8 @@ export const useExportacaoRelatorioQualidadeAgua = (
                 </div>
             `;
 
+            // Mantém compatibilidade com a tipagem (@types/html-to-docx) e com a assinatura
+            // usada anteriormente no projeto: (html, headerHTML, options, footerHTML).
             const bufferArquivo = await htmlToDocx(stringHtmlCompleta, headerHTML, opcoesWord, footerHTML);
             // Converte o ArrayBuffer retornado para Blob com o MIME correto; Word falha
             // na abertura quando recebe apenas o buffer bruto.

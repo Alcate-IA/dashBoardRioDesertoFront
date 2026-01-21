@@ -20,6 +20,14 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
     idSelecionado: number | null,
     fotosInspecao: any[] = []
 ) => {
+    const escaparHtml = (valor: string) =>
+        valor
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
 
     const obterNomePiezometro = () => {
         const piezometro = piezometros.find(p => p.value === idSelecionado);
@@ -249,8 +257,11 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
         }
 
         const urlImagemGrafico = canvasGrafico.toDataURL("image/png");
-        const textoAnalise = (elementoAnaliseIA as HTMLElement).innerText;
-        const linhasAnaliseHtml = textoAnalise.split('\n').map(linha => `<p style="margin: 0;">${linha || '&nbsp;'}</p>`).join('');
+        const textoAnalise = (elementoAnaliseIA as HTMLElement).innerText || '';
+        const linhasAnaliseHtml = textoAnalise
+            .split('\n')
+            .map((linha) => `<p style="margin: 0;">${linha ? escaparHtml(linha) : '&nbsp;'}</p>`)
+            .join('');
 
         let tabelaFotosHtml = '';
         if (fotosInspecao && fotosInspecao.length > 0) {
@@ -296,7 +307,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
 
         const htmlString = `
             <div style="font-family: Arial; padding: 20px;">
-                <h3 style="color: #000; margin-bottom: 20px;">${obterNomePiezometro()}:</h3>
+                <h3 style="color: #000; margin-bottom: 20px;">${escaparHtml(obterNomePiezometro())}:</h3>
                 <div style="text-align: center; margin-bottom: 20px;">
                     <img src="${urlImagemGrafico}" style="width: 600px;" />
                 </div>
@@ -334,6 +345,8 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                 </div>
             `;
 
+            // Mantém compatibilidade com a tipagem (@types/html-to-docx) e com a assinatura
+            // usada anteriormente no projeto: (html, headerHTML, options, footerHTML).
             const bufferArquivo = await htmlToDocx(htmlString, headerHTML, opcoes, footerHTML);
             // Converte explicitamente o ArrayBuffer retornado em Blob com MIME do Word;
             // enviar o ArrayBuffer diretamente fazia o Word acusar arquivo corrompido.
