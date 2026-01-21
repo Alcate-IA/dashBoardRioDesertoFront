@@ -4,6 +4,21 @@ import { RefObject } from "react";
 import { Chart } from "primereact/chart";
 import { saveAs } from 'file-saver';
 import Swal from "sweetalert2";
+import {
+    Document,
+    Packer,
+    Paragraph,
+    TextRun,
+    ImageRun,
+    AlignmentType,
+    Header,
+    Footer,
+    PageOrientation,
+    Table,
+    TableRow,
+    TableCell,
+    WidthType
+} from 'docx';
 
 interface PiezometroOption {
     label: string;
@@ -20,6 +35,13 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
     idSelecionado: number | null,
     fotosInspecao: any[] = []
 ) => {
+    const escaparHtml = (valor: string) =>
+        valor
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
 
     const obterNomePiezometro = () => {
         const piezometro = piezometros.find(p => p.value === idSelecionado);
@@ -28,7 +50,6 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
 
     const urlToBase64 = (url: string): Promise<string> => {
         return new Promise(async (resolve) => {
-            // Usa o proxy de imagens do próprio app para evitar problemas de CORS no fetch do lado do cliente.
             const proxyUrl = `/imagens-proxy?url=${encodeURIComponent(url)}`;
             try {
                 const response = await fetch(proxyUrl);
@@ -36,11 +57,11 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                 const blob = await response.blob();
                 const reader = new FileReader();
                 reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = () => resolve(''); // Resolve com string vazia em caso de erro na leitura
+                reader.onerror = () => resolve('');
                 reader.readAsDataURL(blob);
             } catch (error) {
                 console.error(`Failed to convert URL to Base64 via proxy: ${url}`, error);
-                resolve(''); // Resolve com string vazia em caso de erro no fetch
+                resolve('');
             }
         });
     };
@@ -85,16 +106,16 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
         containerImpressao.appendChild(tituloPiezometro);
 
         const containerRelatorio = document.createElement("div");
-        containerRelatorio.style.backgroundColor = "#333";
+        containerRelatorio.style.backgroundColor = "#000"; // Cor de fundo do gráfico no app
         containerRelatorio.style.color = "#fff";
-        containerRelatorio.style.padding = "20px";
+        containerRelatorio.style.padding = "20px 20px 10px 20px";
 
         const cabecalhoGrafico = document.querySelector(".chart-header")?.cloneNode(true);
         if (cabecalhoGrafico) {
             containerRelatorio.appendChild(cabecalhoGrafico);
         }
 
-        const urlImagemGrafico = canvasGrafico.toDataURL("image/png");
+        const urlImagemGrafico = canvasGrafico.toDataURL("image/jpeg", 0.8);
         const imagemGrafico = document.createElement("img");
         imagemGrafico.src = urlImagemGrafico;
         imagemGrafico.style.width = "100%";
@@ -181,9 +202,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                 imgFoto.style.display = 'block';
                 imgFoto.style.margin = '0 auto';
 
-                // Correção do erro de tipo: passar string em caso de falha
                 tr.appendChild(criarCelula(fotosBase64[index] ? imgFoto : 'Erro ao carregar'));
-
                 tbody.appendChild(tr);
             });
             tabela.appendChild(tbody);
@@ -210,24 +229,19 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
 
                 for (let i = 1; i <= totalPages; i++) {
                     pdf.setPage(i);
-
                     if (base64Logo) {
                         const imgWidth = 2.0;
                         const imgHeight = 0.56;
                         pdf.addImage(base64Logo, 'JPEG', 0.5, 0.1, imgWidth, imgHeight);
                     }
-
                     pdf.setFontSize(8);
                     pdf.setTextColor(51, 51, 51);
                     const footerText1 = "Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil";
                     const footerText2 = "+55 48 3431 9444   www.riodeserto.com.br";
-
                     const textWidth1 = pdf.getStringUnitWidth(footerText1) * 8 / 72;
                     const textWidth2 = pdf.getStringUnitWidth(footerText2) * 8 / 72;
-
                     const x1 = (pageWidth - textWidth1) / 2;
                     const x2 = (pageWidth - textWidth2) / 2;
-
                     pdf.text(footerText1, x1, pageHeight - 0.4);
                     pdf.text(footerText2, x2, pageHeight - 0.25);
                 }
@@ -245,103 +259,176 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
 
         if (!canvasGrafico || !elementoAnaliseIA) {
             console.error("Não foi possível encontrar os elementos para gerar o Word.");
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro na exportação',
+                text: 'Certifique-se de que o gráfico e a análise estão visíveis.'
+            });
             return;
         }
 
-        const urlImagemGrafico = canvasGrafico.toDataURL("image/png");
-        const textoAnalise = (elementoAnaliseIA as HTMLElement).innerText;
-        const linhasAnaliseHtml = textoAnalise.split('\n').map(linha => `<p style="margin: 0;">${linha || '&nbsp;'}</p>`).join('');
-
-        let tabelaFotosHtml = '';
-        if (fotosInspecao && fotosInspecao.length > 0) {
-            const fotosBase64 = await Promise.all(fotosInspecao.map(foto => urlToBase64(foto.caminhoCompleto)));
-
-            const linhasTabelaFotos = fotosInspecao.map((foto, index) => {
-                const dataObj = new Date(foto.dataInsercao);
-                const dataFormatada = dataObj.toLocaleDateString('pt-BR');
-                const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                const imgTag = fotosBase64[index]
-                    ? `<img src="${fotosBase64[index]}" style="width: 340px; height: auto; display: block; margin: 0 auto;" />`
-                    : 'Erro ao carregar imagem';
-
-                return `
-                    <tr>
-                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${foto.idPiezometro || 'N/A'}</td>
-                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${dataFormatada}</td>
-                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${horaFormatada}</td>
-                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${imgTag}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            tabelaFotosHtml = `
-                <div style="margin-top: 30px; page-break-before: auto;">
-                    <h4 style="color: #000; margin-bottom: 15px;">Fotos de Inspeção</h4>
-                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #ccc;">
-                        <thead>
-                            <tr style="background-color: #f4f4f4;">
-                                <th style="border: 1px solid #ccc; padding: 8px; color: #000;">Ponto</th>
-                                <th style="border: 1px solid #ccc; padding: 8px; color: #000;">Data</th>
-                                <th style="border: 1px solid #ccc; padding: 8px; color: #000;">Hora</th>
-                                <th style="border: 1px solid #ccc; padding: 8px; color: #000;">Foto</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${linhasTabelaFotos}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-
-        const htmlString = `
-            <div style="font-family: Arial; padding: 20px;">
-                <h3 style="color: #000; margin-bottom: 20px;">${obterNomePiezometro()}:</h3>
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <img src="${urlImagemGrafico}" style="width: 600px;" />
-                </div>
-                <div style="margin-top: 20px; color: #000;">
-                    ${linhasAnaliseHtml} 
-                </div>
-                ${tabelaFotosHtml}
-            </div>
-        `;
-
-        const opcoes = {
-            orientation: 'landscape' as const,
-            margins: { top: 720, right: 720, bottom: 720, left: 720, header: 360, footer: 360 },
-            header: true,
-            footer: true,
-            headerType: 'default' as const,
-            footerType: 'default' as const
-        };
-
         try {
-            const htmlToDocx = (await import('html-to-docx')).default;
-
+            // 1. Prepara dados das imagens
             const base64Logo = await convertImageToBase64('/assets/logo-melhor.jpg');
+            const urlImagemGrafico = canvasGrafico.toDataURL("image/jpeg", 0.8);
 
-            const headerHTML = `
-                <div style="width: 100%; text-align: left;">
-                    <img src="${base64Logo}" alt="Rio Deserto" style="height: 75px; width: 264px;" />
-                </div>
-            `;
+            // Converte gráfico para Uint8Array
+            const graficoResponse = await fetch(urlImagemGrafico);
+            const graficoBuffer = await graficoResponse.arrayBuffer();
 
-            const footerHTML = `
-                <div style="width: 100%; text-align: center; font-family: Arial, sans-serif; font-size: 10px; color: #333;">
-                    <p style="text-align: center; width: 100%; margin: 0;">Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil</p>
-                    <p style="text-align: center; width: 100%; margin: 0;">+55 48 3431 9444   <strong>www.riodeserto.com.br</strong></p>
-                </div>
-            `;
+            // 2. Prepara parágrafos da análise
+            const textoAnalise = (elementoAnaliseIA as HTMLElement).innerText || '';
+            const paragrafosAnalise = textoAnalise.split('\n').map(linha =>
+                new Paragraph({
+                    children: [new TextRun({ text: linha || ' ', size: 20, font: "Arial" })],
+                    spacing: { after: 120 }
+                })
+            );
 
-            const bufferArquivo = await htmlToDocx(htmlString, headerHTML, opcoes, footerHTML);
-            saveAs(bufferArquivo as Blob, `relatorio-piezometro-${obterNomePiezometro()}.docx`);
+            // 3. Prepara tabela de fotos (se existirem)
+            let tabelaFotos: Table | null = null;
+            if (fotosInspecao && fotosInspecao.length > 0) {
+                const fotosBase64 = await Promise.all(fotosInspecao.map(foto => urlToBase64(foto.caminhoCompleto)));
+
+                const rows = await Promise.all(fotosInspecao.map(async (foto, index) => {
+                    const dataObj = new Date(foto.dataInsercao);
+                    const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+                    const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                    let celulaFoto: TableCell;
+                    if (fotosBase64[index]) {
+                        const fotoResponse = await fetch(fotosBase64[index]);
+                        const fotoBuffer = await fotoResponse.arrayBuffer();
+                        celulaFoto = new TableCell({
+                            children: [
+                                new Paragraph({
+                                    children: [
+                                        new ImageRun({
+                                            data: new Uint8Array(fotoBuffer),
+                                            type: "jpg",
+                                            transformation: { width: 340, height: 255 }
+                                        })
+                                    ],
+                                    alignment: AlignmentType.CENTER
+                                })
+                            ]
+                        });
+                    } else {
+                        celulaFoto = new TableCell({
+                            children: [new Paragraph({ children: [new TextRun("Erro ao carregar imagem")], alignment: AlignmentType.CENTER })]
+                        });
+                    }
+
+                    return new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun(String(foto.idPiezometro || 'N/A'))], alignment: AlignmentType.CENTER })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun(dataFormatada)], alignment: AlignmentType.CENTER })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun(horaFormatada)], alignment: AlignmentType.CENTER })] }),
+                            celulaFoto
+                        ]
+                    });
+                }));
+
+                tabelaFotos = new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    rows: [
+                        new TableRow({
+                            children: [
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Ponto", bold: true })], alignment: AlignmentType.CENTER }),], shading: { fill: "F4F4F4" } }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Data", bold: true })], alignment: AlignmentType.CENTER }),], shading: { fill: "F4F4F4" } }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Hora", bold: true })], alignment: AlignmentType.CENTER }),], shading: { fill: "F4F4F4" } }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Foto", bold: true })], alignment: AlignmentType.CENTER }),], shading: { fill: "F4F4F4" } }),
+                            ]
+                        }),
+                        ...rows
+                    ]
+                });
+            }
+
+            // 4. Monta o logo para o Header
+            let headerChildren: any[] = [];
+            if (base64Logo) {
+                const logoResponse = await fetch(base64Logo);
+                const logoBuffer = await logoResponse.arrayBuffer();
+                headerChildren.push(
+                    new Paragraph({
+                        children: [
+                            new ImageRun({
+                                data: new Uint8Array(logoBuffer),
+                                type: "jpg",
+                                transformation: { width: 200, height: 56 }
+                            })
+                        ],
+                        alignment: AlignmentType.LEFT
+                    })
+                );
+            }
+
+            // 5. Constrói o documento
+            const doc = new Document({
+                sections: [{
+                    properties: {
+                        page: {
+                            size: { orientation: PageOrientation.LANDSCAPE },
+                            margin: { top: 720, right: 720, bottom: 720, left: 720 }
+                        }
+                    },
+                    headers: {
+                        default: new Header({
+                            children: headerChildren
+                        })
+                    },
+                    footers: {
+                        default: new Footer({
+                            children: [
+                                new Paragraph({
+                                    alignment: AlignmentType.CENTER,
+                                    children: [new TextRun({ text: "Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil", size: 16, color: "333333", font: "Arial" })]
+                                }),
+                                new Paragraph({
+                                    alignment: AlignmentType.CENTER,
+                                    children: [new TextRun({ text: "+55 48 3431 9444   www.riodeserto.com.br", size: 16, color: "333333", font: "Arial", bold: true })]
+                                })
+                            ]
+                        })
+                    },
+                    children: [
+                        new Paragraph({
+                            children: [new TextRun({ text: `${obterNomePiezometro()}:`, bold: true, size: 28, font: "Arial" })],
+                            spacing: { after: 200 }
+                        }),
+                        new Paragraph({
+                            children: [
+                                new ImageRun({
+                                    data: new Uint8Array(graficoBuffer),
+                                    type: "jpg",
+                                    transformation: { width: 1000, height: 250 }
+                                })
+                            ],
+                            alignment: AlignmentType.CENTER,
+                            spacing: { after: 200 }
+                        }),
+                        ...paragrafosAnalise,
+                        ...(tabelaFotos ? [
+                            new Paragraph({
+                                children: [new TextRun({ text: "Fotos de Inspeção", bold: true, size: 24, font: "Arial" })],
+                                spacing: { before: 600, after: 300 }
+                            }),
+                            tabelaFotos
+                        ] : [])
+                    ]
+                }]
+            });
+
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, `relatorio-piezometro-${obterNomePiezometro()}.docx`);
+
         } catch (erro) {
-            console.error("Erro ao gerar Word:", erro);
+            console.error("Erro ao gerar Word com biblioteca docx:", erro);
             Swal.fire({
                 icon: 'error',
                 title: 'Erro ao gerar Word',
-                text: 'Ocorreu um problema ao tentar exportar para Word.'
+                text: 'Ocorreu um problema ao tentar exportar para Word usando a biblioteca nativa.'
             });
         }
     };
@@ -351,4 +438,3 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
         aoGerarWord
     };
 };
-
