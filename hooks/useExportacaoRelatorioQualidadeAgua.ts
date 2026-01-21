@@ -46,45 +46,13 @@ export const useExportacaoRelatorioQualidadeAgua = (
             </html>
         `;
 
-        // 1) Tenta com html-to-docx (mantém header/footer reais)
         try {
             const htmlToDocx = (await import('html-to-docx')).default;
             const buffer = await htmlToDocx(htmlCompleto, headerHTML, options, footerHTML);
             if (buffer instanceof Blob) return buffer;
             return new Blob([buffer], { type: mime });
         } catch (erro) {
-            console.error('Falha ao gerar com html-to-docx, tentando fallback html-docx-js', erro);
-        }
-
-        // 2) Fallback: html-docx-js (insere header/footer direto no HTML)
-        try {
-            const htmlDocxJs = await import('html-docx-js');
-            const asBlob =
-                (htmlDocxJs as any).asBlob ||
-                (htmlDocxJs as any).default?.asBlob;
-
-            if (typeof asBlob !== 'function') {
-                throw new Error('html-docx-js não expôs asBlob');
-            }
-
-            const htmlComHeaderFooter = `
-                <!DOCTYPE html>
-                <html>
-                <head><meta charset="UTF-8"></head>
-                <body>
-                    <div style="margin-bottom: 20px;">${headerHTML || ''}</div>
-                    ${html}
-                    <div style="margin-top: 20px;">${footerHTML || ''}</div>
-                </body>
-                </html>
-            `;
-
-            const blobOuBuffer = await asBlob(htmlComHeaderFooter);
-            return blobOuBuffer instanceof Blob
-                ? blobOuBuffer
-                : new Blob([blobOuBuffer], { type: mime });
-        } catch (erroFallback) {
-            console.error('Erro no fallback html-docx-js:', erroFallback);
+            console.error('Erro ao gerar Word com html-to-docx:', erro);
             throw new Error('Não foi possível gerar o arquivo Word.');
         }
     };
