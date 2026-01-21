@@ -33,10 +33,23 @@ export const useExportacaoRelatorioQualidadeAgua = (
     ): Promise<Blob> => {
         const mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
+        // Envolve o HTML em uma estrutura básica padrão para garantir que o conversor interprete corretamente
+        const htmlCompleto = `
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="UTF-8">
+            </head>
+            <body>
+                ${html}
+            </body>
+            </html>
+        `;
+
         // 1) Tenta com html-to-docx (mantém header/footer reais)
         try {
             const htmlToDocx = (await import('html-to-docx')).default;
-            const buffer = await htmlToDocx(html, headerHTML, options, footerHTML);
+            const buffer = await htmlToDocx(htmlCompleto, headerHTML, options, footerHTML);
             if (buffer instanceof Blob) return buffer;
             return new Blob([buffer], { type: mime });
         } catch (erro) {
@@ -44,24 +57,36 @@ export const useExportacaoRelatorioQualidadeAgua = (
         }
 
         // 2) Fallback: html-docx-js (insere header/footer direto no HTML)
-        const htmlDocxJs = await import('html-docx-js');
-        const asBlob =
-            (htmlDocxJs as any).asBlob ||
-            (htmlDocxJs as any).default?.asBlob;
-        if (typeof asBlob !== 'function') {
-            throw new Error('html-docx-js não expôs asBlob');
+        try {
+            const htmlDocxJs = await import('html-docx-js');
+            const asBlob =
+                (htmlDocxJs as any).asBlob ||
+                (htmlDocxJs as any).default?.asBlob;
+
+            if (typeof asBlob !== 'function') {
+                throw new Error('html-docx-js não expôs asBlob');
+            }
+
+            const htmlComHeaderFooter = `
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset="UTF-8"></head>
+                <body>
+                    <div style="margin-bottom: 20px;">${headerHTML || ''}</div>
+                    ${html}
+                    <div style="margin-top: 20px;">${footerHTML || ''}</div>
+                </body>
+                </html>
+            `;
+
+            const blobOuBuffer = await asBlob(htmlComHeaderFooter);
+            return blobOuBuffer instanceof Blob
+                ? blobOuBuffer
+                : new Blob([blobOuBuffer], { type: mime });
+        } catch (erroFallback) {
+            console.error('Erro no fallback html-docx-js:', erroFallback);
+            throw new Error('Não foi possível gerar o arquivo Word.');
         }
-
-        const htmlComHeaderFooter = `
-            <div style="margin-bottom: 20px;">${headerHTML || ''}</div>
-            ${html}
-            <div style="margin-top: 20px;">${footerHTML || ''}</div>
-        `;
-
-        const blobOuBuffer = await asBlob(htmlComHeaderFooter);
-        return blobOuBuffer instanceof Blob
-            ? blobOuBuffer
-            : new Blob([blobOuBuffer], { type: mime });
     };
 
     const obterContainersGraficos = (raiz: HTMLElement): HTMLElement[] => {
@@ -106,7 +131,7 @@ export const useExportacaoRelatorioQualidadeAgua = (
      */
     const capturarContainerCompletoComoImagem = async (container: HTMLElement): Promise<string> => {
         const html2canvas = (await import('html2canvas')).default;
-        
+
         // Salva estilos originais
         const estiloOriginal = {
             position: container.style.position,
@@ -118,7 +143,7 @@ export const useExportacaoRelatorioQualidadeAgua = (
             pointerEvents: container.style.pointerEvents,
             display: container.style.display
         };
-        
+
         // Move temporariamente para dentro da viewport para captura
         container.style.position = 'fixed';
         container.style.left = '0px';
@@ -128,11 +153,11 @@ export const useExportacaoRelatorioQualidadeAgua = (
         container.style.zIndex = '9999';
         container.style.pointerEvents = 'none';
         container.style.display = 'block';
-        
+
         // Aguarda renderização
         await aguardarProximoFrame();
         await aguardarProximoFrame();
-        
+
         try {
             const rect = container.getBoundingClientRect();
             const canvas = await html2canvas(container, {
@@ -145,7 +170,7 @@ export const useExportacaoRelatorioQualidadeAgua = (
                 x: 0,
                 y: 0
             });
-            
+
             // Converte para JPEG (mais leve que PNG)
             return canvas.toDataURL('image/jpeg', 0.9);
         } catch (erro) {
@@ -288,13 +313,13 @@ export const useExportacaoRelatorioQualidadeAgua = (
                 const proporcao1 = img1.width / img1.height;
                 let w1 = larguraDisponivel;
                 let h1 = alturaPorGrafico;
-                
+
                 if (proporcao1 > larguraDisponivel / alturaPorGrafico) {
                     h1 = larguraDisponivel / proporcao1;
                 } else {
                     w1 = alturaPorGrafico * proporcao1;
                 }
-                
+
                 const y1 = topoConteudoY;
                 pdf.addImage(img1.data, 'JPEG', margemX, y1, w1, h1, undefined, 'FAST');
 
@@ -304,13 +329,13 @@ export const useExportacaoRelatorioQualidadeAgua = (
                     const proporcao2 = img2.width / img2.height;
                     let w2 = larguraDisponivel;
                     let h2 = alturaPorGrafico;
-                    
+
                     if (proporcao2 > larguraDisponivel / alturaPorGrafico) {
                         h2 = larguraDisponivel / proporcao2;
                     } else {
                         w2 = alturaPorGrafico * proporcao2;
                     }
-                    
+
                     const y2 = y1 + h1 + espacoEntreGraficos;
                     pdf.addImage(img2.data, 'JPEG', margemX, y2, w2, h2, undefined, 'FAST');
                 }
@@ -354,7 +379,7 @@ export const useExportacaoRelatorioQualidadeAgua = (
             await aguardarProximoFrame();
             const imgData = await capturarContainerCompletoComoImagem(container);
             if (!imgData || imgData.length < 100) continue; // Valida se tem conteúdo
-            
+
             htmlGraficos += `
                 <div style="margin-top: 40px; margin-bottom: 40px; text-align: center; border: none; padding: 0;">
                     <img src="${imgData}" style="max-width: 600px; width: 100%; height: auto; display: block; margin: 0 auto; border: none; box-shadow: none;" />

@@ -36,10 +36,23 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
     ): Promise<Blob> => {
         const mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
+        // Envolve o HTML em uma estrutura básica padrão para garantir que o conversor interprete corretamente
+        const htmlCompleto = `
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="UTF-8">
+            </head>
+            <body>
+                ${html}
+            </body>
+            </html>
+        `;
+
         // 1) Tenta com html-to-docx (mantém header/footer reais)
         try {
             const htmlToDocx = (await import('html-to-docx')).default;
-            const buffer = await htmlToDocx(html, headerHTML, options, footerHTML);
+            const buffer = await htmlToDocx(htmlCompleto, headerHTML, options, footerHTML);
             if (buffer instanceof Blob) return buffer;
             return new Blob([buffer], { type: mime });
         } catch (erro) {
@@ -47,24 +60,36 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
         }
 
         // 2) Fallback: html-docx-js (insere header/footer direto no HTML)
-        const htmlDocxJs = await import('html-docx-js');
-        const asBlob =
-            (htmlDocxJs as any).asBlob ||
-            (htmlDocxJs as any).default?.asBlob;
-        if (typeof asBlob !== 'function') {
-            throw new Error('html-docx-js não expôs asBlob');
+        try {
+            const htmlDocxJs = await import('html-docx-js');
+            const asBlob =
+                (htmlDocxJs as any).asBlob ||
+                (htmlDocxJs as any).default?.asBlob;
+
+            if (typeof asBlob !== 'function') {
+                throw new Error('html-docx-js não expôs asBlob');
+            }
+
+            const htmlComHeaderFooter = `
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset="UTF-8"></head>
+                <body>
+                    <div style="margin-bottom: 20px;">${headerHTML || ''}</div>
+                    ${html}
+                    <div style="margin-top: 20px;">${footerHTML || ''}</div>
+                </body>
+                </html>
+            `;
+
+            const blobOuBuffer = await asBlob(htmlComHeaderFooter);
+            return blobOuBuffer instanceof Blob
+                ? blobOuBuffer
+                : new Blob([blobOuBuffer], { type: mime });
+        } catch (erroFallback) {
+            console.error('Erro no fallback html-docx-js:', erroFallback);
+            throw new Error('Não foi possível gerar o arquivo Word.');
         }
-
-        const htmlComHeaderFooter = `
-            <div style="margin-bottom: 20px;">${headerHTML || ''}</div>
-            ${html}
-            <div style="margin-top: 20px;">${footerHTML || ''}</div>
-        `;
-
-        const blobOuBuffer = await asBlob(htmlComHeaderFooter);
-        return blobOuBuffer instanceof Blob
-            ? blobOuBuffer
-            : new Blob([blobOuBuffer], { type: mime });
     };
 
 
@@ -141,7 +166,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
             containerRelatorio.appendChild(cabecalhoGrafico);
         }
 
-        const urlImagemGrafico = canvasGrafico.toDataURL("image/png");
+        const urlImagemGrafico = canvasGrafico.toDataURL("image/jpeg", 0.8);
         const imagemGrafico = document.createElement("img");
         imagemGrafico.src = urlImagemGrafico;
         imagemGrafico.style.width = "100%";
@@ -295,7 +320,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
             return;
         }
 
-        const urlImagemGrafico = canvasGrafico.toDataURL("image/png");
+        const urlImagemGrafico = canvasGrafico.toDataURL("image/jpeg", 0.8);
         const textoAnalise = (elementoAnaliseIA as HTMLElement).innerText || '';
         const linhasAnaliseHtml = textoAnalise
             .split('\n')
