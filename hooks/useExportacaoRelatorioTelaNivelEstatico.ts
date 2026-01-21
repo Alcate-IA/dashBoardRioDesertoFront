@@ -28,6 +28,45 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
 
+    const gerarBlobDocx = async (
+        html: string,
+        headerHTML: string,
+        options: any,
+        footerHTML: string
+    ): Promise<Blob> => {
+        const mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+        // 1) Tenta com html-to-docx (mantém header/footer reais)
+        try {
+            const htmlToDocx = (await import('html-to-docx')).default;
+            const buffer = await htmlToDocx(html, headerHTML, options, footerHTML);
+            if (buffer instanceof Blob) return buffer;
+            return new Blob([buffer], { type: mime });
+        } catch (erro) {
+            console.error('Falha ao gerar com html-to-docx, tentando fallback html-docx-js', erro);
+        }
+
+        // 2) Fallback: html-docx-js (insere header/footer direto no HTML)
+        const htmlDocxJs = await import('html-docx-js');
+        const asBlob =
+            (htmlDocxJs as any).asBlob ||
+            (htmlDocxJs as any).default?.asBlob;
+        if (typeof asBlob !== 'function') {
+            throw new Error('html-docx-js não expôs asBlob');
+        }
+
+        const htmlComHeaderFooter = `
+            <div style="margin-bottom: 20px;">${headerHTML || ''}</div>
+            ${html}
+            <div style="margin-top: 20px;">${footerHTML || ''}</div>
+        `;
+
+        const blobOuBuffer = await asBlob(htmlComHeaderFooter);
+        return blobOuBuffer instanceof Blob
+            ? blobOuBuffer
+            : new Blob([blobOuBuffer], { type: mime });
+    };
+
 
     const obterNomePiezometro = () => {
         const piezometro = piezometros.find(p => p.value === idSelecionado);
@@ -277,9 +316,9 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
 
                 return `
                     <tr>
-                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${foto.idPiezometro || 'N/A'}</td>
-                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${dataFormatada}</td>
-                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${horaFormatada}</td>
+                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${escaparHtml(String(foto.idPiezometro || 'N/A'))}</td>
+                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${escaparHtml(dataFormatada)}</td>
+                        <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${escaparHtml(horaFormatada)}</td>
                         <td style="border: 1px solid #ccc; padding: 10px; text-align: center; color: #000; vertical-align: middle;">${imgTag}</td>
                     </tr>
                 `;
@@ -347,17 +386,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
 
             // Mantém compatibilidade com a tipagem (@types/html-to-docx) e com a assinatura
             // usada anteriormente no projeto: (html, headerHTML, options, footerHTML).
-            const bufferArquivo = await htmlToDocx(htmlString, headerHTML, opcoes, footerHTML);
-
-            // A lib pode retornar Buffer/Uint8Array/ArrayBuffer ou já um Blob.
-            // Garante Blob final com MIME correto para evitar arquivo inválido no Word.
-            const blobDocx =
-                bufferArquivo instanceof Blob
-                    ? bufferArquivo
-                    : new Blob([bufferArquivo], {
-                        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    });
-
+            const blobDocx = await gerarBlobDocx(htmlString, headerHTML, opcoes, footerHTML);
             saveAs(blobDocx, `relatorio-piezometro-${obterNomePiezometro()}.docx`);
         } catch (erro) {
             console.error("Erro ao gerar Word:", erro);

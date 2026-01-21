@@ -25,12 +25,45 @@ export const useExportacaoRelatorioQualidadeAgua = (
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
 
+    const gerarBlobDocx = async (
+        html: string,
+        headerHTML: string,
+        options: any,
+        footerHTML: string
+    ): Promise<Blob> => {
+        const mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-    /**
-     * Obtém apenas os containers de gráficos "válidos" evitando
-     * clones gerados pelo Carousel do PrimeReact (que usa itens clonados
-     * com a classe `p-carousel-item-cloned` para o modo circular).
-     */
+        // 1) Tenta com html-to-docx (mantém header/footer reais)
+        try {
+            const htmlToDocx = (await import('html-to-docx')).default;
+            const buffer = await htmlToDocx(html, headerHTML, options, footerHTML);
+            if (buffer instanceof Blob) return buffer;
+            return new Blob([buffer], { type: mime });
+        } catch (erro) {
+            console.error('Falha ao gerar com html-to-docx, tentando fallback html-docx-js', erro);
+        }
+
+        // 2) Fallback: html-docx-js (insere header/footer direto no HTML)
+        const htmlDocxJs = await import('html-docx-js');
+        const asBlob =
+            (htmlDocxJs as any).asBlob ||
+            (htmlDocxJs as any).default?.asBlob;
+        if (typeof asBlob !== 'function') {
+            throw new Error('html-docx-js não expôs asBlob');
+        }
+
+        const htmlComHeaderFooter = `
+            <div style="margin-bottom: 20px;">${headerHTML || ''}</div>
+            ${html}
+            <div style="margin-top: 20px;">${footerHTML || ''}</div>
+        `;
+
+        const blobOuBuffer = await asBlob(htmlComHeaderFooter);
+        return blobOuBuffer instanceof Blob
+            ? blobOuBuffer
+            : new Blob([blobOuBuffer], { type: mime });
+    };
+
     const obterContainersGraficos = (raiz: HTMLElement): HTMLElement[] => {
         const carouselContent = raiz.querySelector('.p-carousel-items-content');
 
@@ -374,17 +407,7 @@ export const useExportacaoRelatorioQualidadeAgua = (
 
             // Mantém compatibilidade com a tipagem (@types/html-to-docx) e com a assinatura
             // usada anteriormente no projeto: (html, headerHTML, options, footerHTML).
-            const bufferArquivo = await htmlToDocx(stringHtmlCompleta, headerHTML, opcoesWord, footerHTML);
-
-            // A lib pode retornar Buffer/Uint8Array/ArrayBuffer ou já um Blob.
-            // Garante Blob final com MIME correto para evitar arquivo inválido no Word.
-            const blobDocx =
-                bufferArquivo instanceof Blob
-                    ? bufferArquivo
-                    : new Blob([bufferArquivo], {
-                        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    });
-
+            const blobDocx = await gerarBlobDocx(stringHtmlCompleta, headerHTML, opcoesWord, footerHTML);
             saveAs(blobDocx, "relatorio-qualidade.docx");
         } catch (error) {
             console.error("Erro ao gerar Word:", error);
