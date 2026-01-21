@@ -106,9 +106,9 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
         containerImpressao.appendChild(tituloPiezometro);
 
         const containerRelatorio = document.createElement("div");
-        containerRelatorio.style.backgroundColor = "#333";
+        containerRelatorio.style.backgroundColor = "#000"; // Cor de fundo do gráfico no app
         containerRelatorio.style.color = "#fff";
-        containerRelatorio.style.padding = "20px";
+        containerRelatorio.style.padding = "20px 20px 10px 20px";
 
         const cabecalhoGrafico = document.querySelector(".chart-header")?.cloneNode(true);
         if (cabecalhoGrafico) {
@@ -305,6 +305,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                                     children: [
                                         new ImageRun({
                                             data: new Uint8Array(fotoBuffer),
+                                            type: "jpg",
                                             transformation: { width: 340, height: 255 }
                                         })
                                     ],
@@ -354,6 +355,7 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                         children: [
                             new ImageRun({
                                 data: new Uint8Array(logoBuffer),
+                                type: "jpg",
                                 transformation: { width: 200, height: 56 }
                             })
                         ],
@@ -393,17 +395,18 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
                     children: [
                         new Paragraph({
                             children: [new TextRun({ text: `${obterNomePiezometro()}:`, bold: true, size: 28, font: "Arial" })],
-                            spacing: { after: 400 }
+                            spacing: { after: 200 }
                         }),
                         new Paragraph({
                             children: [
                                 new ImageRun({
                                     data: new Uint8Array(graficoBuffer),
-                                    transformation: { width: 600, height: 300 }
+                                    type: "jpg",
+                                    transformation: { width: 1000, height: 250 }
                                 })
                             ],
                             alignment: AlignmentType.CENTER,
-                            spacing: { after: 400 }
+                            spacing: { after: 200 }
                         }),
                         ...paragrafosAnalise,
                         ...(tabelaFotos ? [

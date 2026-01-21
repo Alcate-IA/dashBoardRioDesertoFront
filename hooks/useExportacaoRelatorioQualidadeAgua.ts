@@ -302,7 +302,6 @@ export const useExportacaoRelatorioQualidadeAgua = (
             const containersIndividuais = obterContainersGraficos(containerGraficos);
 
             for (const container of containersIndividuais) {
-                // eslint-disable-next-line no-await-in-loop
                 await aguardarProximoFrame();
                 const imgData = await capturarContainerCompletoComoImagem(container);
                 if (!imgData || imgData.length < 100) continue;
@@ -329,6 +328,7 @@ export const useExportacaoRelatorioQualidadeAgua = (
                         children: [
                             new ImageRun({
                                 data: new Uint8Array(logoBuffer),
+                                type: "jpg",
                                 transformation: { width: 200, height: 56 }
                             })
                         ],
@@ -391,7 +391,7 @@ export const useExportacaoRelatorioQualidadeAgua = (
                                     font: "Arial"
                                 })
                             ],
-                            spacing: { after: 400 }
+                            spacing: { after: 200 }
                         }),
                         ...paragrafosAnalise,
                         ...imagensGraficos.map(img =>
@@ -399,11 +399,12 @@ export const useExportacaoRelatorioQualidadeAgua = (
                                 children: [
                                     new ImageRun({
                                         data: img,
-                                        transformation: { width: 600, height: 300 }
+                                        type: "jpg",
+                                        transformation: { width: 900, height: 300 }
                                     })
                                 ],
                                 alignment: AlignmentType.CENTER,
-                                spacing: { before: 400, after: 400 }
+                                spacing: { before: 200, after: 200 }
                             })
                         )
                     ]
