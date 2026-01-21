@@ -348,13 +348,17 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
             // Mantém compatibilidade com a tipagem (@types/html-to-docx) e com a assinatura
             // usada anteriormente no projeto: (html, headerHTML, options, footerHTML).
             const bufferArquivo = await htmlToDocx(htmlString, headerHTML, opcoes, footerHTML);
-            // Converte explicitamente o ArrayBuffer retornado em Blob com MIME do Word;
-            // enviar o ArrayBuffer diretamente fazia o Word acusar arquivo corrompido.
-            const blob = new Blob(
-                [bufferArquivo],
-                { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }
-            );
-            saveAs(blob, `relatorio-piezometro-${obterNomePiezometro()}.docx`);
+
+            // A lib pode retornar Buffer/Uint8Array/ArrayBuffer ou já um Blob.
+            // Garante Blob final com MIME correto para evitar arquivo inválido no Word.
+            const blobDocx =
+                bufferArquivo instanceof Blob
+                    ? bufferArquivo
+                    : new Blob([bufferArquivo], {
+                        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    });
+
+            saveAs(blobDocx, `relatorio-piezometro-${obterNomePiezometro()}.docx`);
         } catch (erro) {
             console.error("Erro ao gerar Word:", erro);
             Swal.fire({

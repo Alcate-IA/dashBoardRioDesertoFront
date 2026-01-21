@@ -375,13 +375,17 @@ export const useExportacaoRelatorioQualidadeAgua = (
             // Mantém compatibilidade com a tipagem (@types/html-to-docx) e com a assinatura
             // usada anteriormente no projeto: (html, headerHTML, options, footerHTML).
             const bufferArquivo = await htmlToDocx(stringHtmlCompleta, headerHTML, opcoesWord, footerHTML);
-            // Converte o ArrayBuffer retornado para Blob com o MIME correto; Word falha
-            // na abertura quando recebe apenas o buffer bruto.
-            const blob = new Blob(
-                [bufferArquivo],
-                { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }
-            );
-            saveAs(blob, "relatorio-qualidade.docx");
+
+            // A lib pode retornar Buffer/Uint8Array/ArrayBuffer ou já um Blob.
+            // Garante Blob final com MIME correto para evitar arquivo inválido no Word.
+            const blobDocx =
+                bufferArquivo instanceof Blob
+                    ? bufferArquivo
+                    : new Blob([bufferArquivo], {
+                        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    });
+
+            saveAs(blobDocx, "relatorio-qualidade.docx");
         } catch (error) {
             console.error("Erro ao gerar Word:", error);
             Swal.fire({
