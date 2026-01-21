@@ -335,7 +335,13 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
             `;
 
             const bufferArquivo = await htmlToDocx(htmlString, headerHTML, opcoes, footerHTML);
-            saveAs(bufferArquivo as Blob, `relatorio-piezometro-${obterNomePiezometro()}.docx`);
+            // Converte explicitamente o ArrayBuffer retornado em Blob com MIME do Word;
+            // enviar o ArrayBuffer diretamente fazia o Word acusar arquivo corrompido.
+            const blob = new Blob(
+                [bufferArquivo],
+                { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }
+            );
+            saveAs(blob, `relatorio-piezometro-${obterNomePiezometro()}.docx`);
         } catch (erro) {
             console.error("Erro ao gerar Word:", erro);
             Swal.fire({

@@ -362,7 +362,13 @@ export const useExportacaoRelatorioQualidadeAgua = (
             `;
 
             const bufferArquivo = await htmlToDocx(stringHtmlCompleta, headerHTML, opcoesWord, footerHTML);
-            saveAs(bufferArquivo as Blob, "relatorio-qualidade.docx");
+            // Converte o ArrayBuffer retornado para Blob com o MIME correto; Word falha
+            // na abertura quando recebe apenas o buffer bruto.
+            const blob = new Blob(
+                [bufferArquivo],
+                { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }
+            );
+            saveAs(blob, "relatorio-qualidade.docx");
         } catch (error) {
             console.error("Erro ao gerar Word:", error);
             Swal.fire({
