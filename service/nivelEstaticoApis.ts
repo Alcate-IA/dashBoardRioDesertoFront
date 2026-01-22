@@ -51,12 +51,15 @@ export const webHookIAAnaliseNivelEstatico = async (dto: any, cdPiezometro: numb
     }
 };
 
-export const getPiezometrosAtivos = (tipos: any = null) => {
+export const getPiezometros = (situacao: string | null = 'A', tipos: string[] | null = null) => {
     const params: any = {};
+    if (situacao) {
+        params.situacao = situacao;
+    }
     if (tipos && tipos.length > 0) {
         params.tipos = tipos.join(',');
     }
-    return rota.get("/piezometros/ativos", { params });
+    return rota.get("/piezometros", { params });
 };
 
 export const getFotosInspecaoPiezometroApi = (cdPiezometro: number | string | null, dataInicio: string, dataFim: string) => {
@@ -64,21 +67,6 @@ export const getFotosInspecaoPiezometroApi = (cdPiezometro: number | string | nu
         params: {
             dataInicio,
             dataFim
-        }
-    });
-};
-
-
-// =============================== DEPRECIADAS: 
-//essa aqui era usada para uma versão inicial do sistema que qualidade da água foi implementada junta do nível estático e não estamos mais usando, o componente é esse: components/GraficoPiezometro/ColetaTable.tsx, vou deixar aqui para caso de ouver a necessidade de reutiliza-lo
-
-
-// Usado para dados de coleta simples (GraficoPiezometro - Tabela Coleta)
-export const getColetaPorIdDataInicioDataFimApi = (id: number, inicio: string, fim: string) => {
-    return rota.get(`/relatorios/coleta/${id}/filtro`, {
-        params: {
-            mesAnoInicio: inicio,
-            mesAnoFim: fim
         }
     });
 };
