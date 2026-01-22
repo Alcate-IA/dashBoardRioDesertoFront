@@ -12,6 +12,10 @@ import { Tag } from 'primereact/tag';
 interface ContadoresData {
     contadoresZeus: number;
     contadoresRdLab: number;
+    contadoresZeusAtivos: number;
+    contadoresZeusInativos: number;
+    contadoresRdLabAtivos: number;
+    contadoresRdLabInativos: number;
 }
 
 interface MovimentoRdLab {
@@ -90,7 +94,12 @@ interface PiezometroAtrasado {
 
 export default function GeralPage() {
     const router = useRouter();
-    const [contadores, setContadores] = useState<ContadoresData>({ contadoresZeus: 0, contadoresRdLab: 0 });
+    const [contadores, setContadores] = useState<ContadoresData>({ contadoresZeus: 0, 
+        contadoresRdLab: 0,  
+        contadoresRdLabAtivos: 0, 
+        contadoresRdLabInativos: 0,
+        contadoresZeusAtivos: 0, 
+        contadoresZeusInativos: 0 });
     const [movimentos, setMovimentos] = useState<MovimentoRdLab[]>([]);
     const [movimentosZeus, setMovimentosZeus] = useState<MovimentoZeus[]>([]);
     const [dadosVazaoDaMina, setDadosVazaoDaMina] = useState<DadosVazaoMina | null>(null);
@@ -331,6 +340,7 @@ export default function GeralPage() {
                             <div className="text-900 font-medium text-xl">
                                 {contadores.contadoresZeus} Pontos
                             </div>
+                            <span className="text-400 text-sm">Ativos: {contadores.contadoresZeusAtivos} Inativos: {contadores.contadoresZeusInativos} </span>
                         </div>
                         <div className="flex align-items-center justify-content-center bg-blue-100 border-round" style={{ width: '2.5rem', height: '2.5rem' }}>
                             <i className="pi pi-chart-line text-blue-500 text-xl" />
@@ -351,6 +361,7 @@ export default function GeralPage() {
                         <div>
                             <span className="block text-500 font-medium mb-3">Qualidade da Água</span>
                             <div className="text-900 font-medium text-xl">{contadores.contadoresRdLab} Pontos</div>
+                            <span className="text-400 text-sm">Ativos: {contadores.contadoresRdLabAtivos} Inativos: {contadores.contadoresRdLabInativos} </span>
                         </div>
                         <div className="flex align-items-center justify-content-center bg-cyan-100 border-round" style={{ width: '2.5rem', height: '2.5rem' }}>
                             <i className="pi pi-filter text-cyan-500 text-xl" />
