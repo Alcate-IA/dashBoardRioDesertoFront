@@ -7,6 +7,7 @@ import AnaliseIA from "./AnaliseIA";
 import { SplitButton } from 'primereact/splitbutton';
 import { useGerenciadorRelatorioQualidadeAgua } from "@/hooks/useGerenciadorRelatorioQualidadeAgua";
 import { useExportacaoRelatorioQualidadeAgua } from "@/hooks/useExportacaoRelatorioQualidadeAgua";
+import { useTracker } from '@/hooks/useTracker';
 
 export interface PropriedadesQualidadeAgua {
     idPiezometroInicial?: number;
@@ -29,7 +30,7 @@ export default function QualidadeAgua({
     aplicarAutomaticamente = false,
     ehRelatorio = false,
 }: PropriedadesQualidadeAgua) {
-
+    useTracker('Nível Estático, precipitação e vazão');
     // Hook de Lógica de Dados (Orquestrador)
     const {
         opcoesFiltroSituacao,
