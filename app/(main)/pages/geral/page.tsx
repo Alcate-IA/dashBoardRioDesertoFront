@@ -355,8 +355,7 @@ export default function GeralPage() {
             <div className="col-12 md:col-6 lg:col-4">
                 <div
                     className="card mb-0 hover:surface-100 cursor-pointer transition-duration-200"
-                    onClick={() => handleNavigation('/pages/qualidade-agua')}
-                >
+                    onClick={() => handleNavigation('/pages/qualidade-agua')}>
                     <div className="flex justify-content-between mb-3">
                         <div>
                             <span className="block text-500 font-medium mb-3">Qualidade da Água</span>

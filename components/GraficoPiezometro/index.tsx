@@ -11,7 +11,6 @@ import { SplitButton } from 'primereact/splitbutton';
 import { useGerenciadorNivelEstatico } from "@/hooks/useGerenciadorNivelEstatico";
 import { useExportacaoRelatorioTelaNivelEstatico } from "@/hooks/useExportacaoRelatorioTelaNivelEstatico";
 import BarraFiltros from "./BarraFiltros";
-import Swal from "sweetalert2";
 
 export default function GraficoPiezometro() {
   const chartRef = useRef(null);
@@ -24,6 +23,7 @@ export default function GraficoPiezometro() {
     opcoesGrafico,
     tabelaDados,
     opcoesFiltroTipo,
+    opcoesFiltroSituacao,
     atualizarFiltros,
     aoSelecionarPiezometro,
     aoBuscar,
@@ -79,6 +79,9 @@ export default function GraficoPiezometro() {
         aoMudarTipoFiltro={(valor) =>
           atualizarFiltros({ tipoFiltroSelecionado: valor })
         }
+        opcoesFiltroSituacao={opcoesFiltroSituacao}
+        situacaoSelecionada={filtros.situacao}
+        aoMudarSituacao={(valor) => atualizarFiltros({ situacao: valor })}
         piezometros={piezometros}
         idSelecionado={filtros.idSelecionado}
         aoMudarPiezometro={aoSelecionarPiezometro}

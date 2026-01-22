@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Swal from "sweetalert2";
-import { getPiezometrosAtivos } from "@/service/nivelEstaticoApis";
+import { getPiezometros } from "@/service/nivelEstaticoApis";
 
 export interface PiezometroOpcao {
     label: string;
@@ -17,6 +17,7 @@ export interface FiltrosNivelEstatico {
     dataInicio: Date | null;
     dataFim: Date | null;
     porDia: boolean;
+    situacao: string | null;
 }
 
 /**
@@ -34,7 +35,8 @@ export const useFiltrosNivelEstatico = () => {
         tipoFiltroSelecionado: null,
         dataInicio: null,
         dataFim: null,
-        porDia: false
+        porDia: false,
+        situacao: 'A'
     });
 
     const [piezometros, setPiezometros] = useState<PiezometroOpcao[]>([]);
@@ -50,15 +52,21 @@ export const useFiltrosNivelEstatico = () => {
         { label: "PB - Piezômetro de Bacia", value: "PB" },
     ];
 
+    const opcoesFiltroSituacao = [
+        { label: "Ativo", value: "A" },
+        { label: "Inativo", value: "I" },
+        { label: "Todos", value: null },
+    ];
+
     // Carrega a lista de piezômetros baseada na categoria selecionada
-    const carregarPiezometros = useCallback(async (tipoCategoria: string | null) => {
+    const carregarPiezometros = useCallback(async (tipoCategoria: string | null, situacao: string | null) => {
         setEstaCarregandoOpcoes(true);
         try {
-            const filtroArray = tipoCategoria ? [tipoCategoria] : [];
-            const resposta = await getPiezometrosAtivos(filtroArray);
+            const filtroArray = tipoCategoria ? [tipoCategoria] : null;
+            const resposta = await getPiezometros(situacao, filtroArray);
 
             const formatados = resposta.data.map((p: any) => ({
-                label: `${p.idPiezometro} - ${p.nomePiezometro} (${p.tipoPiezometro})`,
+                label: `${p.idPiezometro} - ${p.nomePiezometro} (${p.tipoPiezometro || 'N/A'})`,
                 value: p.cdPiezometro,
                 tipo: p.tipoPiezometro
             }));
@@ -82,8 +90,8 @@ export const useFiltrosNivelEstatico = () => {
 
     // Atualiza a lista sempre que o filtro de categoria mudar
     useEffect(() => {
-        carregarPiezometros(filtros.tipoFiltroSelecionado);
-    }, [filtros.tipoFiltroSelecionado, carregarPiezometros]);
+        carregarPiezometros(filtros.tipoFiltroSelecionado, filtros.situacao);
+    }, [filtros.tipoFiltroSelecionado, filtros.situacao, carregarPiezometros]);
 
     // Atualiza o estado dos filtros de forma genérica
     const atualizarFiltros = useCallback((novosFiltros: Partial<FiltrosNivelEstatico>) => {
@@ -104,6 +112,7 @@ export const useFiltrosNivelEstatico = () => {
         piezometros,
         estaCarregandoOpcoes,
         opcoesFiltroTipo,
+        opcoesFiltroSituacao,
         atualizarFiltros,
         aoSelecionarPiezometro
     };

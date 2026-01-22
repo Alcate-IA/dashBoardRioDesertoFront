@@ -10,6 +10,11 @@ interface OpcaoFiltro {
     value: string | null;
 }
 
+interface OpcaoFiltroSituacao {
+    label: string;
+    value: string | null;
+}
+
 interface OpcaoPiezometro {
     label: string;
     value: number;
@@ -19,6 +24,11 @@ interface PropriedadesBarraFiltros {
     opcoesFiltro: OpcaoFiltro[];
     tipoFiltroSelecionado: string | null;
     aoMudarTipoFiltro: (valor: string | null) => void;
+
+    opcoesFiltroSituacao: OpcaoFiltroSituacao[];
+    situacaoSelecionada: string | null;
+    aoMudarSituacao: (valor: string | null) => void;
+
 
     piezometros: OpcaoPiezometro[];
     idSelecionado: number | null;
@@ -38,10 +48,11 @@ interface PropriedadesBarraFiltros {
 
 /**
  * Componente de barra de filtros para o gráfico de piezômetros.
- * 
- * Segue o princípio KISS (Mantenha Simples) focando apenas na interface de entrada de dados.
- */
+ *  */
 export default function BarraFiltros({
+    opcoesFiltroSituacao,
+    situacaoSelecionada,
+    aoMudarSituacao,
     opcoesFiltro,
     tipoFiltroSelecionado,
     aoMudarTipoFiltro,
@@ -66,6 +77,18 @@ export default function BarraFiltros({
                     options={opcoesFiltro}
                     onChange={(e) => aoMudarTipoFiltro(e.value)}
                     placeholder="Selecione o tipo"
+                    className="w-full md:w-15rem"
+                    showClear
+                />
+            </div>
+
+            <div className="filter-item">
+                <span className="filter-label">Situação</span>
+                <Dropdown
+                    value={situacaoSelecionada}
+                    options={opcoesFiltroSituacao}
+                    onChange={(e) => aoMudarSituacao(e.value)}
+                    placeholder="Selecione a situação"
                     className="w-full md:w-15rem"
                     showClear
                 />
