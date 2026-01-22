@@ -29,7 +29,6 @@ interface PropriedadesBarraFiltros {
     situacaoSelecionada: string | null;
     aoMudarSituacao: (valor: string | null) => void;
 
-
     piezometros: OpcaoPiezometro[];
     idSelecionado: number | null;
     aoMudarPiezometro: (valor: number) => void;
