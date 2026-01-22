@@ -32,6 +32,9 @@ export default function QualidadeAgua({
 
     // Hook de Lógica de Dados (Orquestrador)
     const {
+        opcoesFiltroSituacao,
+        situacaoSelecionada,
+        aoMudarSituacao,
         tipoFiltroSelecionado,
         setTipoFiltroSelecionado,
         pontoSelecionado,
@@ -90,6 +93,9 @@ export default function QualidadeAgua({
             </div>
 
             <BarraFiltros
+                opcoesFiltroSituacao={opcoesFiltroSituacao}
+                situacaoSelecionada={situacaoSelecionada}
+                aoMudarSituacao={aoMudarSituacao}
                 opcoesFiltro={opcoesFiltroTipo}
                 tipoFiltroSelecionado={tipoFiltroSelecionado}
                 aoMudarTipoFiltro={setTipoFiltroSelecionado}
