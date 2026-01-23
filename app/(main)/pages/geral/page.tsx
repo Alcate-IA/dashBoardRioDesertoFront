@@ -465,7 +465,7 @@ export default function GeralPage() {
                                     <div className="p-4 surface-50 border-round-xl border-1 surface-border h-full">
                                         <div className="flex align-items-center gap-2 mb-2">
                                             <i className="pi pi-sparkles text-purple-600 text-xl"></i>
-                                            <span className="font-bold text-900 text-lg">Tendência hídrica para poços (cheias/secas) por IA:</span>
+                                            <span className="font-bold text-900 text-lg">Tendência preditiva da vazão da mina com previsão do clima (IA)</span>
                                         </div>
                                         <span className="m-0 text-700 line-height-3 text-justify">
                                             {analiseIa}
