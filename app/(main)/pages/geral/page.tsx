@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getApiGeralContadores, apiGeralUltimosMovimentosRdLab, apiGeralUltimosMovimentosZeus, apiDadosDaVazaoDaMina, apiPiozometrosAtrasados } from "@/service/visaoGeralApis";
+import { getApiGeralContadores, apiGeralUltimosMovimentosRdLab, apiGeralUltimosMovimentosZeus, apiDadosDaVazaoDaMina, apiPiozometrosAtrasados, apiGraficoVazaoPrecipitacao } from "@/service/visaoGeralApis";
 import Swal from "sweetalert2";
 import { Carousel } from 'primereact/carousel';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Tag } from 'primereact/tag';
+import { Chart } from 'primereact/chart';
 
 interface ContadoresData {
     contadoresZeus: number;
@@ -92,20 +93,31 @@ interface PiezometroAtrasado {
     diasAtrasado: number;
 }
 
+interface DadosGraficoVazaoPrecipitacao {
+    mes_ano: string;
+    vazao_bombeamento: number;
+    precipitacao: number;
+}
+
+
 export default function GeralPage() {
     const router = useRouter();
-    const [contadores, setContadores] = useState<ContadoresData>({ contadoresZeus: 0, 
-        contadoresRdLab: 0,  
-        contadoresRdLabAtivos: 0, 
+    const [contadores, setContadores] = useState<ContadoresData>({
+        contadoresZeus: 0,
+        contadoresRdLab: 0,
+        contadoresRdLabAtivos: 0,
         contadoresRdLabInativos: 0,
-        contadoresZeusAtivos: 0, 
-        contadoresZeusInativos: 0 });
+        contadoresZeusAtivos: 0,
+        contadoresZeusInativos: 0
+    });
     const [movimentos, setMovimentos] = useState<MovimentoRdLab[]>([]);
     const [movimentosZeus, setMovimentosZeus] = useState<MovimentoZeus[]>([]);
     const [dadosVazaoDaMina, setDadosVazaoDaMina] = useState<DadosVazaoMina | null>(null);
     const [estatisticasVazao, setEstatisticasVazao] = useState<EstatisticasVazao | null>(null);
     const [atrasados, setAtrasados] = useState<PiezometroAtrasado[]>([]);
     const [analiseIa, setAnaliseIa] = useState<string | null>(null);
+    const [graficoData, setGraficoData] = useState<any>(null);
+    const [graficoOptions, setGraficoOptions] = useState<any>(null);
 
     useEffect(() => {
         Swal.fire({
@@ -120,15 +132,60 @@ export default function GeralPage() {
             apiGeralUltimosMovimentosRdLab(),
             apiGeralUltimosMovimentosZeus(),
             apiDadosDaVazaoDaMina(),
-            apiPiozometrosAtrasados()
+            apiPiozometrosAtrasados(),
+            apiGraficoVazaoPrecipitacao()
         ])
-            .then(([resContadores, resMovimentos, resZeus, resDadosVazaoDaMina, resAtrasados]) => {
+            .then(([resContadores, resMovimentos, resZeus, resDadosVazaoDaMina, resAtrasados, resGrafico]) => {
                 setContadores(resContadores.data);
                 setMovimentos(resMovimentos.data || []);
                 setMovimentosZeus(resZeus.data || []);
                 setDadosVazaoDaMina(resDadosVazaoDaMina.data?.resultado || null);
                 setEstatisticasVazao(resDadosVazaoDaMina.data?.analisesSazonais || null);
                 setAnaliseIa(JSON.parse(resDadosVazaoDaMina.data.analiseIa.resposta_raw)[0].output || null);
+
+                // Configuração do Gráfico de Vazão e Precipitação
+                const dadosGraficoVazao = resGrafico.data || [];
+                if (dadosGraficoVazao.length > 0) {
+                    const dadosOrdenados = [...dadosGraficoVazao].sort((a: DadosGraficoVazaoPrecipitacao, b: DadosGraficoVazaoPrecipitacao) => new Date(a.mes_ano).getTime() - new Date(b.mes_ano).getTime());
+
+                    const labels = dadosOrdenados.map((h: DadosGraficoVazaoPrecipitacao) => {
+                        const [ano, mes] = h.mes_ano.split('-');
+                        return `${mes}/${ano}`;
+                    });
+
+                    const datasets = [
+                        {
+                            label: 'Vazão da Mina',
+                            data: dadosOrdenados.map((h: DadosGraficoVazaoPrecipitacao) => h.vazao_bombeamento),
+                            borderColor: '#00bb7e',
+                            backgroundColor: '#00bb7e',
+                            tension: 0.4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Precipitação',
+                            data: dadosOrdenados.map((h: DadosGraficoVazaoPrecipitacao) => h.precipitacao),
+                            borderColor: '#9e4f9eff',
+                            backgroundColor: '#9e4f9eff',
+                            tension: 0.4,
+                            yAxisID: 'y1'
+                        }
+                    ];
+
+                    setGraficoData({ labels, datasets });
+                    setGraficoOptions({
+                        maintainAspectRatio: false,
+                        aspectRatio: 0.6,
+                        plugins: {
+                            legend: { labels: { color: '#ffffff' } }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#ffffff' }, grid: { color: '#ebedef' } },
+                            y: { type: 'linear', display: true, position: 'left', ticks: { color: '#ffffff' }, grid: { color: '#ebedef' }, title: { display: true, text: 'Vazão (m³/h)', color: '#ffffff' } },
+                            y1: { type: 'linear', display: true, position: 'right', ticks: { color: '#ffffff' }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Precipitação (mm)', color: '#ffffff' } }
+                        }
+                    });
+                }
 
                 const normalizedAtrasados = (resAtrasados.data || []).map((item: PiezometroAtrasado) => {
                     if (item.frequenciaDescricao?.toUpperCase() === 'NÃO DEFINIDA') {
@@ -466,6 +523,16 @@ export default function GeralPage() {
                                 </div>
                             </div>
                         </div>
+
+                        <div>
+                            <h5 className="mt-4">Gráfico de vazão da mina e precipitação</h5>
+                            {graficoData && (
+                                <div className="surface-card shadow-2 p-3 border-round">
+                                    <Chart type="line" data={graficoData} options={graficoOptions} style={{ height: '350px' }} />
+                                </div>
+                            )}
+                        </div>
+
 
                         {/* Análise Preditiva IA e Estatísticas de Tendência */}
                         <div className="grid mt-4">
