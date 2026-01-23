@@ -23,11 +23,11 @@ export const useTracker = (contexto: string) => {
 
             // Log em desenvolvimento para validação
             if (process.env.NODE_ENV === 'development') {
-                console.log(`[Tracker] Iniciado em: ${contexto}`, {
-                    userId,
-                    sessionId,
-                    timestamp: new Date().toISOString()
-                });
+                // console.log(`[Tracker] Iniciado em: ${contexto}`, {
+                    // userId,
+                    // sessionId,
+                    // timestamp: new Date().toISOString()
+                // });
             }
 
             jaInicializou.current = true;

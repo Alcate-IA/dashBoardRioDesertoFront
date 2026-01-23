@@ -18,10 +18,13 @@ export const salvarAvaliacaoIA = async (dados: {
 };
 
 export const getPiezometroFiltroComHistoricoApi = (cdPiezometro: number | string | null, inicio: string, fim: string) => {
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+    
     return rota.get(`/relatorio-nivel-estatico/piezometro/${cdPiezometro}/filtro-com-historico`, {
         params: {
             mesAnoInicio: inicio,
-            mesAnoFim: fim
+            mesAnoFim: fim,
+            userId
         }
     });
 };
