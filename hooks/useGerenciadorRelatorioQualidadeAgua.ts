@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import Swal from "sweetalert2";
@@ -45,6 +45,7 @@ export const useGerenciadorRelatorioQualidadeAgua = ({
         execucao.resetarResultados();
     }, [
         filtros.tipoFiltroSelecionado,
+        filtros.situacao,
         filtros.pontoSelecionado,
         filtros.dataInicio,
         filtros.dataFim,
@@ -82,6 +83,11 @@ export const useGerenciadorRelatorioQualidadeAgua = ({
         // Expondo estados e setters dos filtros
         tipoFiltroSelecionado: filtros.tipoFiltroSelecionado,
         setTipoFiltroSelecionado: filtros.setTipoFiltroSelecionado,
+        
+        opcoesFiltroSituacao: filtros.opcoesFiltroSituacao,
+        situacaoSelecionada: filtros.situacao,
+        aoMudarSituacao: filtros.setSituacao,
+
         pontoSelecionado: filtros.pontoSelecionado,
         setPontoSelecionado: filtros.setPontoSelecionado,
         dataInicio: filtros.dataInicio,

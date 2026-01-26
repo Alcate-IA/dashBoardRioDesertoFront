@@ -40,6 +40,7 @@ export const useGerenciadorNivelEstatico = () => {
         piezometros,
         estaCarregandoOpcoes,
         opcoesFiltroTipo,
+        opcoesFiltroSituacao,
         atualizarFiltros,
         aoSelecionarPiezometro
     } = useFiltrosNivelEstatico();
@@ -257,6 +258,7 @@ export const useGerenciadorNivelEstatico = () => {
         piezometros,
         estaCarregandoOpcoes,
         opcoesFiltroTipo,
+        opcoesFiltroSituacao,
         atualizarFiltros,
         aoSelecionarPiezometro,
 
