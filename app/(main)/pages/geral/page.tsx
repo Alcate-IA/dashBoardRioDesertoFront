@@ -11,6 +11,7 @@ import { Tag } from 'primereact/tag';
 import { Chart } from 'primereact/chart';
 import { Dialog } from 'primereact/dialog';
 import DetalhePiezometroZeusPopup from '@/components/DetalhePiezometroZeusPopup';
+import DetalheQualidadeAguaRdLabPopup from '@/components/DetalheQualidadeAguaRdLabPopup';
 
 interface ContadoresData {
     contadoresZeus: number;
@@ -121,6 +122,7 @@ export default function GeralPage() {
     const [graficoData, setGraficoData] = useState<any>(null);
     const [graficoOptions, setGraficoOptions] = useState<any>(null);
     const [popupPiezometroZeus, setPopupPiezometroZeus] = useState<MovimentoZeus | null>(null);
+    const [popupRdLab, setPopupRdLab] = useState<MovimentoRdLab | null>(null);
 
     useEffect(() => {
         Swal.fire({
@@ -230,7 +232,7 @@ export default function GeralPage() {
 
         return (
             <div className="p-2">
-                <div className="surface-card shadow-2 border-round p-3 h-full">
+                <div className="surface-card shadow-2 border-round p-3 h-full transition-colors transition-duration-150 flex flex-column">
                     <div className="flex align-items-center justify-content-between mb-3">
                         <span className="text-xl font-bold text-900">{movimento.nm_piezometro}</span>
                         <div className="flex align-items-center gap-2">
@@ -239,24 +241,31 @@ export default function GeralPage() {
                         </div>
                     </div>
 
-                    <div className="flex flex-column gap-2">
-                        <div className="flex align-items-center gap-2">
-                            <i className="pi pi-user text-primary"></i>
-                            <span className="text-600">Coletor:</span>
-                            <span className="text-900 font-medium">{nomeColaborador}</span>
+                    <div className="flex align-items-center gap-3 flex-grow-1">
+                        <div className="flex flex-column gap-2 flex-1">
+                            <div className="flex align-items-center gap-2">
+                                <i className="pi pi-user text-primary"></i>
+                                <span className="text-600">Coletor:</span>
+                                <span className="text-900 font-medium">{nomeColaborador}</span>
+                            </div>
+
+                            <div className="flex align-items-center gap-2">
+                                <i className="pi pi-hashtag text-primary"></i>
+                                <span className="text-600">Registro:</span>
+                                <span className="text-900 font-medium">{movimento.n_registro}</span>
+                            </div>
                         </div>
 
-                        {/* <div className="flex align-items-center gap-2">
-                            <i className="pi pi-tag text-primary"></i>
-                            <span className="text-600">Tipo:</span>
-                            <span className="text-900 font-medium">{movimento.tp_piezometro}</span>
-                        </div> */}
-
-                        <div className="flex align-items-center gap-2">
-                            <i className="pi pi-hashtag text-primary"></i>
-                            <span className="text-600">Registro:</span>
-                            <span className="text-900 font-medium">{movimento.n_registro}</span>
-                        </div>
+                        <button
+                            type="button"
+                            className="p-button p-button-outlined p-button-sm flex-shrink-0 ml-2"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setPopupRdLab(movimento);
+                            }}
+                        >
+                            Analisar
+                        </button>
                     </div>
                 </div>
             </div>
@@ -746,6 +755,27 @@ export default function GeralPage() {
                             cd_piezometro: popupPiezometroZeus.cd_piezometro,
                             nm_piezometro: popupPiezometroZeus.nm_piezometro,
                             tp_piezometro: popupPiezometroZeus.tp_piezometro,
+                        }}
+                    />
+                )}
+            </Dialog>
+
+            <Dialog
+                header={popupRdLab ? `${popupRdLab.nm_piezometro} — Qualidade da Água (10/2008 até hoje)` : ''}
+                visible={!!popupRdLab}
+                onHide={() => setPopupRdLab(null)}
+                style={{ width: '92vw', maxWidth: 'none', height: '90vh', maxHeight: '90vh' }}
+                contentStyle={{ maxHeight: 'calc(90vh - 8rem)', overflow: 'auto' }}
+                className="p-dialog-analise-zeus"
+                maximizable
+                blockScroll
+                dismissableMask
+            >
+                {popupRdLab && (
+                    <DetalheQualidadeAguaRdLabPopup
+                        movimento={{
+                            id_zeus: popupRdLab.id_zeus,
+                            nm_piezometro: popupRdLab.nm_piezometro,
                         }}
                     />
                 )}
