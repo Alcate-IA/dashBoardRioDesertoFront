@@ -25,6 +25,7 @@ export const useAnaliseIATelaRelNivelEstatico = (
     const aoAvaliar = () => {
         if (!cdPiezometro) {
             Swal.fire({
+                customClass: { container: 'swal-above-modal' },
                 icon: 'warning',
                 title: 'Atenção',
                 text: 'Selecione um piezômetro para avaliar a análise.'
@@ -33,6 +34,7 @@ export const useAnaliseIATelaRelNivelEstatico = (
         }
 
         Swal.fire({
+            customClass: { container: 'swal-above-modal' },
             title: 'Avaliar Análise da IA',
             html: `
                 <div class="flex flex-column gap-3">
@@ -81,6 +83,7 @@ export const useAnaliseIATelaRelNivelEstatico = (
                     const { title, text } = resposta.data;
 
                     Swal.fire({
+                        customClass: { container: 'swal-above-modal' },
                         icon: 'success',
                         title: title,
                         text: text,
@@ -91,6 +94,7 @@ export const useAnaliseIATelaRelNivelEstatico = (
                     console.error('Erro ao salvar avaliação:', erro);
                     const { title, text } = erro.response?.data || {};
                     Swal.fire({
+                        customClass: { container: 'swal-above-modal' },
                         icon: 'error',
                         title: title || 'Erro',
                         text: text || 'Ocorreu um erro ao salvar a avaliação.'

@@ -768,3 +768,30 @@ body {
         }
     }
 }
+
+/* Modal de Análise Zeus — quase tela cheia, mantendo cara de modal */
+.p-dialog-analise-zeus.p-dialog {
+    border-radius: 12px !important;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5) !important;
+    overflow: hidden;
+    background-color: var(--rio-deserto-card-bg) !important;
+}
+
+.p-dialog-analise-zeus .p-dialog-content,
+.p-dialog-analise-zeus .p-dialog-content:last-of-type {
+    border-radius: 0 0 12px 12px !important;
+    background-color: var(--rio-deserto-card-bg) !important;
+    padding-bottom: 1rem !important;
+    border: none !important;
+    flex: 1 1 auto !important;
+}
+
+/* Remove faixa inferior transparente: painel e conteúdo com mesmo fundo opaco */
+.p-dialog-analise-zeus .p-dialog-content-wrapper {
+    background-color: var(--rio-deserto-card-bg) !important;
+}
+
+/* SweetAlert (avaliação) acima do modal de análise */
+.swal-above-modal {
+    z-index: 1300 !important;
+}

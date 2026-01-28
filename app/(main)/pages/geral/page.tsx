@@ -9,6 +9,8 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Tag } from 'primereact/tag';
 import { Chart } from 'primereact/chart';
+import { Dialog } from 'primereact/dialog';
+import DetalhePiezometroZeusPopup from '@/components/DetalhePiezometroZeusPopup';
 
 interface ContadoresData {
     contadoresZeus: number;
@@ -118,6 +120,7 @@ export default function GeralPage() {
     const [analiseIa, setAnaliseIa] = useState<string | null>(null);
     const [graficoData, setGraficoData] = useState<any>(null);
     const [graficoOptions, setGraficoOptions] = useState<any>(null);
+    const [popupPiezometroZeus, setPopupPiezometroZeus] = useState<MovimentoZeus | null>(null);
 
     useEffect(() => {
         Swal.fire({
@@ -267,7 +270,7 @@ export default function GeralPage() {
 
         return (
             <div className="p-2">
-                <div className="surface-card shadow-2 border-round p-3 h-full">
+                <div className="surface-card shadow-2 border-round p-3 h-full transition-colors transition-duration-150 flex flex-column">
                     <div className="flex align-items-center justify-content-between mb-3">
                         <span className="text-xl font-bold text-900">{movimento.nm_piezometro}</span>
                         <div className="flex align-items-center gap-2">
@@ -276,60 +279,75 @@ export default function GeralPage() {
                         </div>
                     </div>
 
-                    <div className="flex flex-column gap-2">
-                        <div className="flex align-items-center gap-2">
-                            <i className="pi pi-user text-primary"></i>
-                            <span className="text-600">Coletor:</span>
-                            <span className="text-900 font-medium">{movimento.colaborador}</span>
+                    <div className="flex align-items-center gap-3 flex-grow-1">
+                        <div className="flex flex-column gap-2 flex-1">
+                            <div className="flex align-items-center gap-2">
+                                <i className="pi pi-user text-primary"></i>
+                                <span className="text-600">Coletor:</span>
+                                <span className="text-900 font-medium">{movimento.colaborador}</span>
+                            </div>
+
+                            <div className="flex align-items-center gap-2">
+                                <i className="pi pi-tag text-primary"></i>
+                                <span className="text-600">Tipo:</span>
+                                <span className="text-900 font-medium">{movimento.tp_piezometro}</span>
+                            </div>
+
+                            {ehNivel && (
+                                <div className="flex align-items-center gap-2">
+                                    <i className="pi pi-chart-line text-blue-500"></i>
+                                    <span className="text-600">Nível Estático:</span>
+                                    <span className="text-900 font-medium">{movimento.nivel_estatico} m</span>
+                                </div>
+                            )}
+
+                            {ehVazao && (
+                                <div className="flex align-items-center gap-2">
+                                    <i className="pi pi-water text-blue-500"></i>
+                                    <span className="text-600">Vazão:</span>
+                                    <span className="text-900 font-medium">{movimento.vazao !== null ? movimento.vazao : '-'} m³/h</span>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex align-items-center gap-2">
-                            <i className="pi pi-tag text-primary"></i>
-                            <span className="text-600">Tipo:</span>
-                            <span className="text-900 font-medium">{movimento.tp_piezometro}</span>
-                        </div>
-
-                        {ehNivel && (
-                            <div className="flex align-items-center gap-2">
-                                <i className="pi pi-chart-line text-blue-500"></i>
-                                <span className="text-600">Nível Estático:</span>
-                                <span className="text-900 font-medium">{movimento.nivel_estatico} m</span>
-                            </div>
-                        )}
-
-                        {ehVazao && (
-                            <div className="flex align-items-center gap-2">
-                                <i className="pi pi-water text-blue-500"></i>
-                                <span className="text-600">Vazão:</span>
-                                <span className="text-900 font-medium">{movimento.vazao !== null ? movimento.vazao : '-'} m³/h</span>
-                            </div>
-                        )}
-
-                        {movimento.ds_observacao && (
-                            <div className="flex align-items-start gap-2 mt-2 pt-2 border-top-1 border-200">
-                                <i className="pi pi-info-circle text-orange-500 mt-1"></i>
-                                <span className="text-600 text-sm font-italic">{movimento.ds_observacao}</span>
-                            </div>
-                        )}
-
-                        {/* Alertas e Indicadores */}
-                        {movimento.dados && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {movimento.dados.maior_leitura && (
-                                    <span className="inline-flex align-items-center gap-1 px-2 py-1 border-round bg-red-100 text-red-700 text-xs font-bold">
-                                        <i className="pi pi-exclamation-circle text-red-700"></i>
-                                        Maior leitura já vista
-                                    </span>
-                                )}
-                                {movimento.dados.menor_leitura && (
-                                    <span className="inline-flex align-items-center gap-1 px-2 py-1 border-round bg-red-100 text-red-700 text-xs font-bold">
-                                        <i className="pi pi-exclamation-circle text-red-700"></i>
-                                        Menor leitura já vista
-                                    </span>
-                                )}
-                            </div>
-                        )}
+                        <button
+                            type="button"
+                            className="p-button p-button-outlined p-button-sm flex-shrink-0 ml-2"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setPopupPiezometroZeus(movimento);
+                            }}
+                        >
+                            Analisar
+                        </button>
                     </div>
+
+                    {(movimento.ds_observacao || (movimento.dados && (movimento.dados.maior_leitura || movimento.dados.menor_leitura))) && (
+                        <div className="mt-3 pt-3 border-top-1 border-200 flex flex-column gap-2">
+                            {movimento.ds_observacao && (
+                                <div className="flex align-items-start gap-2">
+                                    <i className="pi pi-info-circle text-orange-500 mt-1"></i>
+                                    <span className="text-600 text-sm font-italic">{movimento.ds_observacao}</span>
+                                </div>
+                            )}
+                            {movimento.dados && (movimento.dados.maior_leitura || movimento.dados.menor_leitura) && (
+                                <div className="flex flex-wrap gap-2">
+                                    {movimento.dados.maior_leitura && (
+                                        <span className="inline-flex align-items-center gap-1 px-2 py-1 border-round bg-red-100 text-red-700 text-xs font-bold">
+                                            <i className="pi pi-exclamation-circle text-red-700"></i>
+                                            Maior leitura já vista
+                                        </span>
+                                    )}
+                                    {movimento.dados.menor_leitura && (
+                                        <span className="inline-flex align-items-center gap-1 px-2 py-1 border-round bg-red-100 text-red-700 text-xs font-bold">
+                                            <i className="pi pi-exclamation-circle text-red-700"></i>
+                                            Menor leitura já vista
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -710,6 +728,28 @@ export default function GeralPage() {
                     )}
                 </div>
             </div>
+
+            <Dialog
+                header={popupPiezometroZeus ? `${popupPiezometroZeus.nm_piezometro} — Histórico (10/2008 até hoje)` : ''}
+                visible={!!popupPiezometroZeus}
+                onHide={() => setPopupPiezometroZeus(null)}
+                style={{ width: '92vw', maxWidth: 'none', height: '90vh', maxHeight: '90vh' }}
+                contentStyle={{ maxHeight: 'calc(90vh - 8rem)', overflow: 'auto' }}
+                className="p-dialog-analise-zeus"
+                maximizable
+                blockScroll
+                dismissableMask
+            >
+                {popupPiezometroZeus && (
+                    <DetalhePiezometroZeusPopup
+                        movimento={{
+                            cd_piezometro: popupPiezometroZeus.cd_piezometro,
+                            nm_piezometro: popupPiezometroZeus.nm_piezometro,
+                            tp_piezometro: popupPiezometroZeus.tp_piezometro,
+                        }}
+                    />
+                )}
+            </Dialog>
         </div>
     );
 }
