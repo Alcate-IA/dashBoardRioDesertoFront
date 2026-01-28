@@ -24,6 +24,7 @@ export const useAnaliseIATelaQualidadeAgua = (
     const aoAvaliar = () => {
         if (!idZeus) {
             Swal.fire({
+                customClass: { container: 'swal-above-modal' },
                 icon: 'warning',
                 title: 'Atenção',
                 text: 'Selecione um ponto para avaliar a análise.'
@@ -32,6 +33,7 @@ export const useAnaliseIATelaQualidadeAgua = (
         }
 
         Swal.fire({
+            customClass: { container: 'swal-above-modal' },
             title: 'Avaliar Análise da IA',
             html: `
                 <div class="flex flex-column gap-3">
@@ -80,6 +82,7 @@ export const useAnaliseIATelaQualidadeAgua = (
                     const { title, text } = resposta.data;
 
                     Swal.fire({
+                        customClass: { container: 'swal-above-modal' },
                         icon: 'success',
                         title: title,
                         text: text,
@@ -90,6 +93,7 @@ export const useAnaliseIATelaQualidadeAgua = (
                     console.error('Erro ao salvar avaliação:', erro);
                     const { title, text } = erro.response?.data || {};
                     Swal.fire({
+                        customClass: { container: 'swal-above-modal' },
                         icon: 'error',
                         title: title || 'Erro',
                         text: text || 'Não foi possível salvar a avaliação.'
