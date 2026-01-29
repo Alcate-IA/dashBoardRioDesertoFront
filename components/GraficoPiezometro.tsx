@@ -12,7 +12,7 @@ import { Column } from "primereact/column";
 
 import Swal from "sweetalert2";
 
-import { getPiezometroFiltroComHistoricoApi, getPiezometrosAtivos } from "@/service/nivelEstaticoApis";
+import { getPiezometroFiltroComHistoricoApi, getPiezometros } from "@/service/nivelEstaticoApis";
 import { formatarData } from "@/utils/formatarData";
 
 interface GraficoPiezometroProps {
@@ -68,8 +68,7 @@ export default function GraficoPiezometro({
   ) => {
     setCarregando(true);
     try {
-      const filtroArray = tipoFiltro ? [tipoFiltro] : [];
-      const resposta = await getPiezometrosAtivos(filtroArray);
+      const resposta = await getPiezometros('A', tipoFiltro ? [tipoFiltro] : null);
 
       const piezometrosFiltrados = resposta.data.filter(
         (p: any) => p.tipoPiezometro !== "PB"
