@@ -8,6 +8,8 @@ interface PropriedadesGrafico {
     opcoesGrafico: any;
     tipoPiezometro: string | null;
     tabelaDados: any[];
+    /** Quando informada, substitui a mensagem padrão do estado vazio (ex.: após aplicar e API retornar vazio). */
+    mensagemEstadoVazio?: string;
 }
 
 /**
@@ -16,7 +18,7 @@ interface PropriedadesGrafico {
  */
 
 const GraficoTelaNivelEstatico = forwardRef<Chart, PropriedadesGrafico>(
-    ({ dadosGrafico, opcoesGrafico, tipoPiezometro, tabelaDados }, ref) => {
+    ({ dadosGrafico, opcoesGrafico, tipoPiezometro, tabelaDados, mensagemEstadoVazio }, ref) => {
         const [atualizacaoLegenda, setAtualizacaoLegenda] = useState(0);
 
         const aoClicarNaLegenda = (indiceDataset: number) => {
@@ -112,7 +114,7 @@ const GraficoTelaNivelEstatico = forwardRef<Chart, PropriedadesGrafico>(
                         className="flex align-items-center justify-content-center"
                         style={{ height: "400px", color: "#666" }}
                     >
-                        Selecione os filtros e clique em Aplicar para visualizar os dados
+                        {mensagemEstadoVazio ?? "Selecione os filtros e clique em Aplicar para visualizar os dados"}
                     </div>
                 )}
             </div>

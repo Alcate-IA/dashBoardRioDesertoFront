@@ -38,13 +38,19 @@ body {
 /* Filter Bar Styles */
 .filter-bar {
     display: flex;
-    gap: 1rem;
-    align-items: center;
+    flex-direction: column;
+    gap: 0;
     background-color: #202020;
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
     border: 1px solid #333;
+}
+
+.filter-bar-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
     flex-wrap: wrap;
 }
 
@@ -63,7 +69,7 @@ body {
 
 /* Responsive Filter Bar */
 @media (max-width: 630px) {
-    .filter-bar {
+    .filter-bar-row {
         flex-direction: column;
         align-items: stretch;
     }
@@ -114,6 +120,58 @@ body {
 .p-inputtext:enabled:focus {
     border-color: var(--rio-deserto-primary) !important;
     box-shadow: 0 0 0 1px var(--rio-deserto-primary) !important;
+}
+
+/* Piezômetro: campo sem tag/chip, apenas texto no trigger */
+.piezometro-select-sem-chip.p-multiselect .p-multiselect-token,
+.piezometro-select-sem-chip.p-multiselect .p-multiselect-token-icon {
+    display: none !important;
+}
+.piezometro-select-sem-chip.p-multiselect .p-multiselect-label {
+    color: inherit;
+}
+
+/* Piezômetro: campo alinhado aos outros, sem crescer */
+.filter-item-piezometro {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+}
+.piezometro-campo-wrapper {
+    width: 100%;
+    max-width: 18rem;
+}
+
+/* Lista de piezômetros selecionados: linha própria abaixo da barra (não desloca o campo) */
+.filter-bar-selecionados-row {
+    width: 100%;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #333;
+}
+
+.lista-piezometros-selecionados {
+    list-style: none;
+    margin: 0.5rem 0 0 0;
+    padding: 0 0 0 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.82);
+    line-height: 1.3;
+}
+.lista-piezometros-selecionados li {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.lista-piezometros-selecionados .p-button {
+    width: 1.35rem !important;
+    height: 1.35rem !important;
+    min-width: 1.35rem !important;
+    min-height: 1.35rem !important;
+    opacity: 0.85;
 }
 
 /* Calendário - Ícone integrado ao input */
@@ -601,6 +659,8 @@ body {
 
     .filter-bar {
         padding: 0.75rem;
+    }
+    .filter-bar-row {
         gap: 0.75rem;
     }
 
@@ -719,7 +779,7 @@ body {
 }
 
 @media (max-width: 1024px) {
-    .filter-bar {
+    .filter-bar-row {
         gap: 0.75rem;
     }
 
@@ -728,7 +788,7 @@ body {
         min-width: 220px;
     }
 
-    .filter-item:nth-child(3) {
+    .filter-bar-row .filter-item:nth-child(3) {
         flex-basis: 100%;
     }
 }
