@@ -12,8 +12,9 @@ import { useTracker } from "@/hooks/useTracker";
 
 import { useGerenciadorNivelEstatico, ResultadoPiezometro } from "@/hooks/useGerenciadorNivelEstatico";
 import { useConfiguracaoGraficoNivelEstatico } from "@/hooks/useConfiguracaoGraficoNivelEstatico";
-import { useExportacaoRelatorioTelaNivelEstatico } from "@/hooks/useExportacaoRelatorioTelaNivelEstatico";
+import { useExportacaoRelatorioTelaNivelEstatico, ConteudoAbaExportacao } from "@/hooks/useExportacaoRelatorioTelaNivelEstatico";
 import BarraFiltros from "./BarraFiltros";
+import Swal from "sweetalert2";
 
 interface ConteudoAbaPiezometroProps {
   resultado: ResultadoPiezometro;
@@ -118,16 +119,80 @@ export default function GraficoPiezometro() {
     filtros.dataFim
   );
 
-  const { aoGerarPdf, aoGerarWord } = useExportacaoRelatorioTelaNivelEstatico(
+  const { aoGerarPdf, aoGerarWord, aoGerarPdfTodasAbas, aoGerarWordTodasAbas } = useExportacaoRelatorioTelaNivelEstatico(
     chartRef as any,
     piezometros,
     effectiveIdPiezometro,
     effectiveFotosInspecao
   );
 
+  const coletarConteudoAbas = async (): Promise<ConteudoAbaExportacao[]> => {
+    const lista = listaPiezometrosProntos;
+    const conteudos: ConteudoAbaExportacao[] = [];
+    for (let i = 0; i < lista.length; i++) {
+      setActiveTabIndex(i);
+      await new Promise((r) => setTimeout(r, 450));
+      const id = lista[i].id;
+      const resultado = resultadosPorPiezometro[id];
+      const canvas = (chartRef.current as any)?.getCanvas?.();
+      const elAnalise = document.getElementById("textoApareceNoPdf");
+      conteudos.push({
+        nomePiezometro: resultado?.label ?? lista[i].label ?? String(id),
+        imageDataUrlGrafico: canvas ? canvas.toDataURL("image/jpeg", 0.8) : "",
+        textoAnalise: (elAnalise as HTMLElement)?.innerText ?? "",
+        fotosInspecao: resultado?.fotosInspecao ?? [],
+      });
+    }
+    return conteudos;
+  };
+
+  const aoGerarPdfTodasAbasClick = async () => {
+    if (listaPiezometrosProntos.length <= 1) {
+      Swal.fire({ icon: "info", title: "Uma aba apenas", text: "Use 'PDF aba atual' ou selecione vários piezômetros e aplique." });
+      return;
+    }
+    Swal.fire({
+      title: "Exportando...",
+      html: "Coletando conteúdo de todas as abas e gerando o PDF.",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+    try {
+      const conteudos = await coletarConteudoAbas();
+      await aoGerarPdfTodasAbas(conteudos);
+      Swal.close();
+    } catch (e) {
+      console.error(e);
+      Swal.fire({ icon: "error", title: "Erro ao exportar PDF de todas as abas" });
+    }
+  };
+
+  const aoGerarWordTodasAbasClick = async () => {
+    if (listaPiezometrosProntos.length <= 1) {
+      Swal.fire({ icon: "info", title: "Uma aba apenas", text: "Use 'Word aba atual' ou selecione vários piezômetros e aplique." });
+      return;
+    }
+    Swal.fire({
+      title: "Exportando...",
+      html: "Coletando conteúdo de todas as abas e gerando o Word.",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+    try {
+      const conteudos = await coletarConteudoAbas();
+      await aoGerarWordTodasAbas(conteudos);
+      Swal.close();
+    } catch (e) {
+      console.error(e);
+      Swal.fire({ icon: "error", title: "Erro ao exportar Word de todas as abas" });
+    }
+  };
+
   const exportItems = [
-    { label: "PDF", icon: "pi pi-file-pdf", command: aoGerarPdf },
-    { label: "Word", icon: "pi pi-file-word", command: aoGerarWord },
+    { label: "PDF aba atual", icon: "pi pi-file-pdf", command: aoGerarPdf },
+    { label: "Word aba atual", icon: "pi pi-file-word", command: aoGerarWord },
+    { label: "PDF todas as abas", icon: "pi pi-file-pdf", command: aoGerarPdfTodasAbasClick },
+    { label: "Word todas as abas", icon: "pi pi-file-word", command: aoGerarWordTodasAbasClick },
   ];
 
   const aoSalvarAnalise = (texto: string) => {

@@ -25,6 +25,14 @@ interface PiezometroOption {
     value: number;
 }
 
+/** Conteúdo de uma aba para exportação em "todas as abas" */
+export interface ConteudoAbaExportacao {
+    nomePiezometro: string;
+    imageDataUrlGrafico: string;
+    textoAnalise: string;
+    fotosInspecao: any[];
+}
+
 /**
  * Hook customizado para gerenciar a exportação de relatórios (PDF e Word) na tela de Nível Estático.
  * Se refere ao: components/GraficoPiezometro/AnaliseIA.tsx
@@ -433,8 +441,298 @@ export const useExportacaoRelatorioTelaNivelEstatico = (
         }
     };
 
+    /** Gera um único PDF com todas as abas (cada aba = seção com gráfico, análise e fotos). */
+    const aoGerarPdfTodasAbas = async (conteudos: ConteudoAbaExportacao[]) => {
+        if (!conteudos?.length) {
+            Swal.fire({ icon: 'warning', title: 'Nada para exportar', text: 'Não há conteúdo das abas.' });
+            return;
+        }
+        try {
+            const containerImpressao = document.createElement("div");
+            containerImpressao.style.padding = "20px";
+
+            const base64Logo = await convertImageToBase64('/assets/logo-melhor.jpg');
+
+            for (let idx = 0; idx < conteudos.length; idx++) {
+                const c = conteudos[idx];
+                const tituloPiezometro = document.createElement("h3");
+                tituloPiezometro.textContent = `${c.nomePiezometro}:`;
+                tituloPiezometro.style.marginBottom = "20px";
+                tituloPiezometro.style.color = "#000";
+                tituloPiezometro.style.pageBreakBefore = idx > 0 ? "always" : "auto";
+                containerImpressao.appendChild(tituloPiezometro);
+
+                const containerRelatorio = document.createElement("div");
+                containerRelatorio.style.backgroundColor = "#000";
+                containerRelatorio.style.color = "#fff";
+                containerRelatorio.style.padding = "20px 20px 10px 20px";
+
+                const imagemGrafico = document.createElement("img");
+                imagemGrafico.src = c.imageDataUrlGrafico;
+                imagemGrafico.style.width = "100%";
+                containerRelatorio.appendChild(imagemGrafico);
+                containerImpressao.appendChild(containerRelatorio);
+
+                const containerAnalise = document.createElement('div');
+                containerAnalise.style.marginTop = '20px';
+                (c.textoAnalise || '').split('\n').forEach(linha => {
+                    const p = document.createElement('p');
+                    p.textContent = linha || '\u00A0';
+                    p.style.color = 'black';
+                    p.style.margin = '0';
+                    p.style.breakInside = 'avoid';
+                    containerAnalise.appendChild(p);
+                });
+                containerImpressao.appendChild(containerAnalise);
+
+                if (c.fotosInspecao?.length > 0) {
+                    const containerFotos = document.createElement('div');
+                    containerFotos.style.marginTop = '30px';
+                    containerFotos.style.breakInside = 'avoid';
+                    const tituloFotos = document.createElement('h4');
+                    tituloFotos.textContent = 'Fotos de Inspeção';
+                    tituloFotos.style.marginBottom = '15px';
+                    tituloFotos.style.color = '#000';
+                    containerFotos.appendChild(tituloFotos);
+                    const tabela = document.createElement('table');
+                    tabela.style.width = '100%';
+                    tabela.style.borderCollapse = 'collapse';
+                    tabela.style.border = '1px solid #ccc';
+                    const thead = document.createElement('thead');
+                    const trHeader = document.createElement('tr');
+                    ['Ponto', 'Data', 'Hora', 'Foto'].forEach(texto => {
+                        const th = document.createElement('th');
+                        th.textContent = texto;
+                        th.style.border = '1px solid #ccc';
+                        th.style.padding = '8px';
+                        th.style.backgroundColor = '#f4f4f4';
+                        th.style.color = '#000';
+                        trHeader.appendChild(th);
+                    });
+                    thead.appendChild(trHeader);
+                    tabela.appendChild(thead);
+                    const tbody = document.createElement('tbody');
+                    const fotosBase64 = await Promise.all(c.fotosInspecao.map((f: any) => urlToBase64(f.caminhoCompleto)));
+                    c.fotosInspecao.forEach((foto: any, index: number) => {
+                        const tr = document.createElement('tr');
+                        const dataObj = new Date(foto.dataInsercao);
+                        const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+                        const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        const criarCelula = (conteudo: string | HTMLElement) => {
+                            const td = document.createElement('td');
+                            td.style.border = '1px solid #ccc';
+                            td.style.padding = '10px';
+                            td.style.textAlign = 'center';
+                            td.style.color = '#000';
+                            td.style.verticalAlign = 'middle';
+                            if (typeof conteudo === 'string') td.textContent = conteudo;
+                            else td.appendChild(conteudo);
+                            return td;
+                        };
+                        tr.appendChild(criarCelula(foto.idPiezometro || 'N/A'));
+                        tr.appendChild(criarCelula(dataFormatada));
+                        tr.appendChild(criarCelula(horaFormatada));
+                        const imgFoto = document.createElement('img');
+                        imgFoto.src = fotosBase64[index];
+                        imgFoto.style.width = '340px';
+                        imgFoto.style.height = 'auto';
+                        imgFoto.style.display = 'block';
+                        imgFoto.style.margin = '0 auto';
+                        tr.appendChild(criarCelula(fotosBase64[index] ? imgFoto : 'Erro ao carregar'));
+                        tbody.appendChild(tr);
+                    });
+                    tabela.appendChild(tbody);
+                    containerFotos.appendChild(tabela);
+                    containerImpressao.appendChild(containerFotos);
+                }
+            }
+
+            const html2pdf = (await import("html2pdf.js")).default;
+            const opcoes = {
+                margin: [0.8, 0.5, 0.8, 0.5] as [number, number, number, number],
+                filename: 'relatorio-piezometros-todas-abas.pdf',
+                image: { type: "jpeg" as const, quality: 0.98 },
+                html2canvas: { scale: 2, letterRendering: true, useCORS: true },
+                jsPDF: { unit: "in", format: "letter", orientation: "landscape" as const },
+            };
+            await html2pdf().from(containerImpressao).set(opcoes).toPdf().get('pdf').then((pdf: any) => {
+                const totalPages = pdf.internal.getNumberOfPages();
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                for (let i = 1; i <= totalPages; i++) {
+                    pdf.setPage(i);
+                    if (base64Logo) {
+                        pdf.addImage(base64Logo, 'JPEG', 0.5, 0.1, 2.0, 0.56);
+                    }
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(51, 51, 51);
+                    pdf.text("Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil", (pageWidth - pdf.getStringUnitWidth("Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil") * 8 / 72) / 2, pageHeight - 0.4);
+                    pdf.text("+55 48 3431 9444   www.riodeserto.com.br", (pageWidth - pdf.getStringUnitWidth("+55 48 3431 9444   www.riodeserto.com.br") * 8 / 72) / 2, pageHeight - 0.25);
+                }
+                pdf.save(opcoes.filename);
+            });
+        } catch (erro) {
+            console.error("Erro ao gerar PDF todas as abas:", erro);
+            Swal.fire({ icon: 'error', title: 'Erro ao gerar PDF' });
+        }
+    };
+
+    /** Gera um único Word com todas as abas (cada aba = seção com gráfico, análise e fotos). */
+    const aoGerarWordTodasAbas = async (conteudos: ConteudoAbaExportacao[]) => {
+        if (!conteudos?.length) {
+            Swal.fire({ icon: 'warning', title: 'Nada para exportar', text: 'Não há conteúdo das abas.' });
+            return;
+        }
+        try {
+            const base64Logo = await convertImageToBase64('/assets/logo-melhor.jpg');
+            let headerChildren: any[] = [];
+            if (base64Logo) {
+                const logoResponse = await fetch(base64Logo);
+                const logoBuffer = await logoResponse.arrayBuffer();
+                headerChildren.push(
+                    new Paragraph({
+                        children: [
+                            new ImageRun({
+                                data: new Uint8Array(logoBuffer),
+                                type: "jpg",
+                                transformation: { width: 200, height: 56 }
+                            })
+                        ],
+                        alignment: AlignmentType.LEFT
+                    })
+                );
+            }
+
+            const children: any[] = [];
+            for (const c of conteudos) {
+                const graficoResponse = await fetch(c.imageDataUrlGrafico);
+                const graficoBuffer = await graficoResponse.arrayBuffer();
+                const paragrafosAnalise = (c.textoAnalise || '').split('\n').map(linha =>
+                    new Paragraph({
+                        children: [new TextRun({ text: linha || ' ', size: 20, font: "Arial" })],
+                        spacing: { after: 120 }
+                    })
+                );
+
+                let tabelaFotos: Table | null = null;
+                if (c.fotosInspecao?.length > 0) {
+                    const fotosBase64 = await Promise.all(c.fotosInspecao.map((f: any) => urlToBase64(f.caminhoCompleto)));
+                    const rows = await Promise.all(c.fotosInspecao.map(async (foto: any, index: number) => {
+                        const dataObj = new Date(foto.dataInsercao);
+                        const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+                        const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        let celulaFoto: TableCell;
+                        if (fotosBase64[index]) {
+                            const fotoResponse = await fetch(fotosBase64[index]);
+                            celulaFoto = new TableCell({
+                                children: [
+                                    new Paragraph({
+                                        children: [
+                                            new ImageRun({
+                                                data: new Uint8Array(await fotoResponse.arrayBuffer()),
+                                                type: "jpg",
+                                                transformation: { width: 340, height: 255 }
+                                            })
+                                        ],
+                                        alignment: AlignmentType.CENTER
+                                    })
+                                ]
+                            });
+                        } else {
+                            celulaFoto = new TableCell({
+                                children: [new Paragraph({ children: [new TextRun("Erro ao carregar imagem")], alignment: AlignmentType.CENTER })]
+                            });
+                        }
+                        return new TableRow({
+                            children: [
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun(String(foto.idPiezometro || 'N/A'))], alignment: AlignmentType.CENTER })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun(dataFormatada)], alignment: AlignmentType.CENTER })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun(horaFormatada)], alignment: AlignmentType.CENTER })] }),
+                                celulaFoto
+                            ]
+                        });
+                    }));
+                    tabelaFotos = new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                            new TableRow({
+                                children: [
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Ponto", bold: true })], alignment: AlignmentType.CENTER }),], shading: { fill: "F4F4F4" } }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Data", bold: true })], alignment: AlignmentType.CENTER }),], shading: { fill: "F4F4F4" } }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Hora", bold: true })], alignment: AlignmentType.CENTER }),], shading: { fill: "F4F4F4" } }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Foto", bold: true })], alignment: AlignmentType.CENTER }),], shading: { fill: "F4F4F4" } }),
+                                ]
+                            }),
+                            ...rows
+                        ]
+                    });
+                }
+
+                children.push(
+                    new Paragraph({
+                        children: [new TextRun({ text: `${c.nomePiezometro}:`, bold: true, size: 28, font: "Arial" })],
+                        spacing: { after: 200 }
+                    }),
+                    new Paragraph({
+                        children: [
+                            new ImageRun({
+                                data: new Uint8Array(graficoBuffer),
+                                type: "jpg",
+                                transformation: { width: 1000, height: 250 }
+                            })
+                        ],
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 200 }
+                    }),
+                    ...paragrafosAnalise,
+                    ...(tabelaFotos ? [
+                        new Paragraph({
+                            children: [new TextRun({ text: "Fotos de Inspeção", bold: true, size: 24, font: "Arial" })],
+                            spacing: { before: 600, after: 300 }
+                        }),
+                        tabelaFotos
+                    ] : [])
+                );
+            }
+
+            const doc = new Document({
+                sections: [{
+                    properties: {
+                        page: {
+                            size: { orientation: PageOrientation.LANDSCAPE },
+                            margin: { top: 720, right: 720, bottom: 720, left: 720 }
+                        }
+                    },
+                    headers: { default: new Header({ children: headerChildren }) },
+                    footers: {
+                        default: new Footer({
+                            children: [
+                                new Paragraph({
+                                    alignment: AlignmentType.CENTER,
+                                    children: [new TextRun({ text: "Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil", size: 16, color: "333333", font: "Arial" })]
+                                }),
+                                new Paragraph({
+                                    alignment: AlignmentType.CENTER,
+                                    children: [new TextRun({ text: "+55 48 3431 9444   www.riodeserto.com.br", size: 16, color: "333333", font: "Arial", bold: true })]
+                                })
+                            ]
+                        })
+                    },
+                    children
+                }]
+            });
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, 'relatorio-piezometros-todas-abas.docx');
+        } catch (erro) {
+            console.error("Erro ao gerar Word todas as abas:", erro);
+            Swal.fire({ icon: 'error', title: 'Erro ao gerar Word' });
+        }
+    };
+
     return {
         aoGerarPdf,
-        aoGerarWord
+        aoGerarWord,
+        aoGerarPdfTodasAbas,
+        aoGerarWordTodasAbas
     };
 };
