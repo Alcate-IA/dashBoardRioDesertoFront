@@ -2,6 +2,7 @@
 
 import { Calendar } from "primereact/calendar";
 import { Dropdown } from "primereact/dropdown";
+import { MultiSelect } from "primereact/multiselect";
 import { Button } from "primereact/button";
 import { Checkbox } from "primereact/checkbox";
 
@@ -30,8 +31,8 @@ interface PropriedadesBarraFiltros {
     aoMudarSituacao: (valor: string | null) => void;
 
     piezometros: OpcaoPiezometro[];
-    idSelecionado: number | null;
-    aoMudarPiezometro: (valor: number) => void;
+    idsSelecionados: number[];
+    aoMudarPiezometros: (valor: number[] | null) => void;
     estaCarregando: boolean;
 
     dataInicio: Date | null;
@@ -56,8 +57,8 @@ export default function BarraFiltros({
     tipoFiltroSelecionado,
     aoMudarTipoFiltro,
     piezometros,
-    idSelecionado,
-    aoMudarPiezometro,
+    idsSelecionados,
+    aoMudarPiezometros,
     estaCarregando,
     dataInicio,
     dataFim,
@@ -69,46 +70,52 @@ export default function BarraFiltros({
 }: PropriedadesBarraFiltros) {
     return (
         <div className="card filter-bar">
-            <div className="filter-item">
-                <span className="filter-label">Visualização</span>
-                <Dropdown
-                    value={tipoFiltroSelecionado}
-                    options={opcoesFiltro}
-                    onChange={(e) => aoMudarTipoFiltro(e.value)}
-                    placeholder="Selecione o tipo"
-                    className="w-full md:w-15rem"
-                    showClear
-                />
-            </div>
+            <div className="filter-bar-row">
+                <div className="filter-item">
+                    <span className="filter-label">Visualização</span>
+                    <Dropdown
+                        value={tipoFiltroSelecionado}
+                        options={opcoesFiltro}
+                        onChange={(e) => aoMudarTipoFiltro(e.value)}
+                        placeholder="Selecione o tipo"
+                        className="w-full md:w-15rem"
+                        showClear
+                    />
+                </div>
 
-            <div className="filter-item">
-                <span className="filter-label">Situação</span>
-                <Dropdown
-                    value={situacaoSelecionada}
-                    options={opcoesFiltroSituacao}
-                    onChange={(e) => aoMudarSituacao(e.value)}
-                    placeholder="Selecione a situação"
-                    className="w-full md:w-15rem"
-                    showClear
-                />
-            </div>
+                <div className="filter-item">
+                    <span className="filter-label">Situação</span>
+                    <Dropdown
+                        value={situacaoSelecionada}
+                        options={opcoesFiltroSituacao}
+                        onChange={(e) => aoMudarSituacao(e.value)}
+                        placeholder="Selecione a situação"
+                        className="w-full md:w-15rem"
+                        showClear
+                    />
+                </div>
 
-            <div className="filter-item">
-                <span className="filter-label">Piezômetro</span>
-                <Dropdown
-                    value={idSelecionado}
-                    options={piezometros}
-                    onChange={(e) => aoMudarPiezometro(e.value)}
-                    placeholder={estaCarregando ? "Carregando..." : "Selecione..."}
-                    className="w-full md:w-14rem"
-                    filter
-                    showClear
-                    disabled={estaCarregando}
-                    panelClassName="dropdown-panel-mobile"
-                />
-            </div>
+                <div className="filter-item filter-item-piezometro">
+                    <span className="filter-label">Piezômetro(s)</span>
+                    <div className="piezometro-campo-wrapper">
+                        <MultiSelect
+                            value={idsSelecionados}
+                            options={piezometros}
+                            onChange={(e) => aoMudarPiezometros(e.value)}
+                            placeholder={estaCarregando ? "Carregando..." : "Selecione um ou mais..."}
+                            className="w-full md:w-18rem piezometro-select-sem-chip"
+                            filter
+                            showClear
+                            disabled={estaCarregando}
+                            panelClassName="dropdown-panel-mobile"
+                            selectedItemsLabel={
+                                idsSelecionados.length > 1 ? "{0} piezômetros selecionados" : undefined
+                            }
+                        />
+                    </div>
+                </div>
 
-            <div className="filter-item">
+                <div className="filter-item">
                 <span className="filter-label">Período</span>
                 <div className="flex gap-2">
                     <Calendar
@@ -145,14 +152,39 @@ export default function BarraFiltros({
                 </label>
             </div>
 
-            <div className="ml-auto">
-                <Button
-                    label="APLICAR"
-                    onClick={aoBuscar}
-                    className="p-button-warning font-bold"
-                    disabled={estaCarregando}
-                />
+                <div className="ml-auto">
+                    <Button
+                        label="APLICAR"
+                        onClick={aoBuscar}
+                        className="p-button-warning font-bold"
+                        disabled={estaCarregando}
+                    />
+                </div>
             </div>
+
+            {idsSelecionados.length > 0 && (
+                <div className="filter-bar-selecionados-row">
+                    <ul className="lista-piezometros-selecionados">
+                        {idsSelecionados.map((id) => {
+                            const item = piezometros.find((p) => p.value === id);
+                            const label = item?.label ?? String(id);
+                            return (
+                                <li key={id}>
+                                    <span>{label}</span>
+                                    <button
+                                        type="button"
+                                        className="p-button p-button-text p-button-rounded p-button-icon-only p-button-sm"
+                                        onClick={() => aoMudarPiezometros(idsSelecionados.filter((x) => x !== id))}
+                                        aria-label="Remover piezômetro"
+                                    >
+                                        <i className="pi pi-times" />
+                                    </button>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }

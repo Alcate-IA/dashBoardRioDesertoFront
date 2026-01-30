@@ -11,7 +11,9 @@ export interface PiezometroOpcao {
 }
 
 export interface FiltrosNivelEstatico {
-    idSelecionado: number | null;
+    /** Um ou mais piezômetros selecionados (vazio = nenhum). */
+    idsSelecionados: number[];
+    /** Tipo do primeiro selecionado (para compatibilidade e gráfico). */
     tipoSelecionado: string | null;
     tipoFiltroSelecionado: string | null;
     dataInicio: Date | null;
@@ -30,7 +32,7 @@ export interface FiltrosNivelEstatico {
  */
 export const useFiltrosNivelEstatico = () => {
     const [filtros, setFiltros] = useState<FiltrosNivelEstatico>({
-        idSelecionado: null,
+        idsSelecionados: [],
         tipoSelecionado: null,
         tipoFiltroSelecionado: null,
         dataInicio: null,
@@ -73,12 +75,14 @@ export const useFiltrosNivelEstatico = () => {
 
             setPiezometros(formatados);
 
-            // Se o piezômetro que estava selecionado não existe na nova lista (após mudar categoria), limpamos a seleção
+            // Se algum piezômetro selecionado não existir na nova lista (após mudar categoria), removemos da seleção
             setFiltros(prev => {
-                if (prev.idSelecionado && !formatados.find((p: any) => p.value === prev.idSelecionado)) {
-                    return { ...prev, idSelecionado: null, tipoSelecionado: null };
-                }
-                return prev;
+                const idsValidos = prev.idsSelecionados.filter(id => formatados.some((p: any) => p.value === id));
+                const mudou = idsValidos.length !== prev.idsSelecionados.length;
+                const tipo = idsValidos.length > 0
+                    ? (formatados.find((p: any) => p.value === idsValidos[0])?.tipo ?? null)
+                    : null;
+                return mudou ? { ...prev, idsSelecionados: idsValidos, tipoSelecionado: tipo } : prev;
             });
         } catch (erro) {
             console.error("Erro ao carregar piezômetros para o filtro:", erro);
@@ -98,12 +102,14 @@ export const useFiltrosNivelEstatico = () => {
         setFiltros(prev => ({ ...prev, ...novosFiltros }));
     }, []);
 
-    // Helper específico para selecionar um piezômetro e já setar o tipo dele automaticamente
-    const aoSelecionarPiezometro = useCallback((id: number) => {
-        const encontrado = piezometros.find(p => p.value === id);
+    /** Atualiza a lista de piezômetros selecionados (múltipla escolha). Define também o tipo pelo primeiro da lista. */
+    const aoMudarPiezometros = useCallback((ids: number[] | null) => {
+        const lista = ids && ids.length > 0 ? ids : [];
+        const primeiro = lista[0];
+        const encontrado = piezometros.find(p => p.value === primeiro);
         atualizarFiltros({
-            idSelecionado: id,
-            tipoSelecionado: encontrado?.tipo || null
+            idsSelecionados: lista,
+            tipoSelecionado: encontrado?.tipo ?? null
         });
     }, [piezometros, atualizarFiltros]);
 
@@ -114,6 +120,6 @@ export const useFiltrosNivelEstatico = () => {
         opcoesFiltroTipo,
         opcoesFiltroSituacao,
         atualizarFiltros,
-        aoSelecionarPiezometro
+        aoMudarPiezometros
     };
 };
