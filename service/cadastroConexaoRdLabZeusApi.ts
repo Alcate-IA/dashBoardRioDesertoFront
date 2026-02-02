@@ -14,6 +14,14 @@ export const buscarPiezometrosConectados = () => {
 };
 
 /**
+ * Busca a lista de piezômetros Zeus sem conexão com Rd Lab.
+ * @returns Promise com a lista de piezômetros sem conexão
+ */
+export const buscarPiezometrosSemConexao = () => {
+    return rota.get("/api/conexao-rd-lab-zeus/piezometros-sem-conexao");
+};
+
+/**
  * Exclui uma conexão existente.
  * @param idConexao ID da conexão a ser excluída
  * @returns Promise da exclusão

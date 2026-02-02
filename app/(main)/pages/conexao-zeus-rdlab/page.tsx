@@ -14,6 +14,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import {
     buscarPiezometrosConectados,
+    buscarPiezometrosSemConexao,
     buscarPiezometrosZeus,
     buscarPiezometrosRdLab,
     excluirConexao,
@@ -43,6 +44,12 @@ interface PiezometroRdLab {
     identificacao: string;
 }
 
+interface PiezometroSemConexao {
+    id_piezometro: string;
+    nm_piezometro: string;
+    cd_piezometro: number;
+}
+
 interface FormConexao {
     idConexao: number;
     idZeus: number | null;
@@ -51,6 +58,8 @@ interface FormConexao {
 
 export default function ConexaoZeusRdLabPage() {
     const [conexoes, setConexoes] = useState<ConexaoConectada[]>([]);
+    const [naoConectados, setNaoConectados] = useState<PiezometroSemConexao[]>([]);
+    const [listandoConectados, setListandoConectados] = useState(true);
     const [piezometrosZeus, setPiezometrosZeus] = useState<PiezometroZeus[]>([]);
     const [piezometrosRdLab, setPiezometrosRdLab] = useState<PiezometroRdLab[]>([]);
     const [carregando, setCarregando] = useState(true);
@@ -70,6 +79,14 @@ export default function ConexaoZeusRdLabPage() {
         carregarDadosIniciais();
     }, []);
 
+    const extrairArray = (res: { data?: unknown }): unknown[] => {
+        const d = res?.data;
+        if (Array.isArray(d)) return [...d];
+        if (d && typeof d === "object" && "content" in d && Array.isArray((d as { content: unknown[] }).content))
+            return [...(d as { content: unknown[] }).content];
+        return [];
+    };
+
     const carregarDadosIniciais = async () => {
         setCarregando(true);
         try {
@@ -79,13 +96,14 @@ export default function ConexaoZeusRdLabPage() {
                 buscarPiezometrosRdLab()
             ]);
 
-            setConexoes(resConectados.data || []);
-            const zeusMapeado = (resZeus.data || []).map((p: PiezometroZeus) => ({
+            setConexoes(extrairArray(resConectados) as ConexaoConectada[]);
+            const zeusData = extrairArray(resZeus) as PiezometroZeus[];
+            const zeusMapeado = zeusData.map((p: PiezometroZeus) => ({
                 ...p,
                 labelCompleto: `${p.nm_piezometro} - ${p.id_piezometro}`
             }));
             setPiezometrosZeus(zeusMapeado);
-            setPiezometrosRdLab(resRdLab.data || []);
+            setPiezometrosRdLab((extrairArray(resRdLab) as PiezometroRdLab[]) || []);
         } catch (erro) {
             console.error("Erro ao carregar dados:", erro);
             toast.current?.show({
@@ -107,6 +125,56 @@ export default function ConexaoZeusRdLabPage() {
         });
         setEditando(false);
         setExibirDialogo(true);
+    };
+
+    const abrirConectar = (piezometro: PiezometroSemConexao) => {
+        setFormulario({
+            idConexao: 0,
+            idZeus: piezometro.cd_piezometro,
+            idRdLab: null
+        });
+        setEditando(false);
+        setExibirDialogo(true);
+    };
+
+    const alternarLista = async () => {
+        if (listandoConectados) {
+            setCarregando(true);
+            try {
+                const res = await buscarPiezometrosSemConexao();
+                setNaoConectados(extrairArray(res) as PiezometroSemConexao[]);
+                setListandoConectados(false);
+            } catch (erro) {
+                console.error("Erro ao carregar piezômetros sem conexão:", erro);
+                toast.current?.show({
+                    severity: "error",
+                    summary: "Erro",
+                    detail: "Falha ao carregar piezômetros sem conexão.",
+                    life: 3000
+                });
+            } finally {
+                setCarregando(false);
+            }
+        } else {
+            setCarregando(true);
+            try {
+                const [resConectados] = await Promise.all([
+                    buscarPiezometrosConectados()
+                ]);
+                setConexoes(extrairArray(resConectados) as ConexaoConectada[]);
+                setListandoConectados(true);
+            } catch (erro) {
+                console.error("Erro ao carregar conexões:", erro);
+                toast.current?.show({
+                    severity: "error",
+                    summary: "Erro",
+                    detail: "Falha ao carregar conexões.",
+                    life: 3000
+                });
+            } finally {
+                setCarregando(false);
+            }
+        }
     };
 
     const fecharDialogo = () => {
@@ -184,7 +252,12 @@ export default function ConexaoZeusRdLabPage() {
             });
 
             fecharDialogo();
-            carregarDadosIniciais();
+            if (listandoConectados) {
+                carregarDadosIniciais();
+            } else {
+                const res = await buscarPiezometrosSemConexao();
+                setNaoConectados(extrairArray(res) as PiezometroSemConexao[]);
+            }
         } catch (erro: unknown) {
             console.error("Erro ao salvar conexão:", erro);
             const mensagem =
@@ -223,9 +296,23 @@ export default function ConexaoZeusRdLabPage() {
         );
     };
 
+    const botaoConectar = (rowData: PiezometroSemConexao) => {
+        return (
+            <Button
+                icon="pi pi-plus"
+                rounded
+                severity="success"
+                onClick={() => abrirConectar(rowData)}
+                tooltip="Conectar"
+            />
+        );
+    };
+
     const cabecalho = (
         <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-            <h5 className="m-0">Conexões Zeus - Rd Lab</h5>
+            <h5 className="m-0">
+                {listandoConectados ? "Conexões Zeus - Rd Lab" : "Piezômetros Zeus sem conexão"}
+            </h5>
             <span className="block mt-2 md:mt-0 p-input-icon-left">
                 <i className="pi pi-search" />
                 <InputText
@@ -239,14 +326,20 @@ export default function ConexaoZeusRdLabPage() {
 
     const toolbarEsquerda = () => {
         return (
-            <React.Fragment>
+            <div className="flex gap-2 align-items-center">
                 <Button
                     label="Nova Conexão"
                     icon="pi pi-plus"
                     severity="success"
                     onClick={abrirNovo}
                 />
-            </React.Fragment>
+                <Button
+                    label={listandoConectados ? "Listar não conectados" : "Listar conectados"}
+                    icon={listandoConectados ? "pi pi-list" : "pi pi-check-circle"}
+                    severity={listandoConectados ? "warning" : "success"}
+                    onClick={alternarLista}
+                />
+            </div>
         );
     };
 
@@ -276,46 +369,94 @@ export default function ConexaoZeusRdLabPage() {
 
                     <Toolbar className="mb-4" left={toolbarEsquerda}></Toolbar>
 
-                    <DataTable
-                        value={conexoes}
-                        dataKey="id_conexao"
-                        paginator
-                        rows={10}
-                        rowsPerPageOptions={[5, 10, 25]}
-                        className="datatable-responsive"
-                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} conexões"
-                        globalFilter={filtroGlobal}
-                        filters={{}}
-                        emptyMessage="Nenhuma conexão encontrada."
-                        header={cabecalho}
-                        loading={carregando}
-                        responsiveLayout="scroll"
-                    >
-                        <Column
-                            field="nm_piezometro"
-                            header="Nome Zeus"
-                            sortable
-                            headerStyle={{ minWidth: "12rem" }}
-                        ></Column>
-                        <Column
-                            field="id_piezometro"
-                            header="Descrição Zeus"
-                            sortable
-                            headerStyle={{ minWidth: "15rem" }}
-                        ></Column>
-                        <Column
-                            field="identificacao"
-                            header="Rd Lab (Identificação)"
-                            sortable
-                            headerStyle={{ minWidth: "15rem" }}
-                        ></Column>
-                        <Column
-                            body={botoesAcao}
-                            exportable={false}
-                            style={{ minWidth: "8rem" }}
-                        ></Column>
-                    </DataTable>
+                    {/* Tabela de conexões (conectados) */}
+                    <div style={{ display: listandoConectados ? "block" : "none" }}>
+                        <DataTable
+                            value={conexoes}
+                            dataKey="id_conexao"
+                            paginator
+                            rows={10}
+                            rowsPerPageOptions={[5, 10, 25]}
+                            className="datatable-responsive"
+                            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} conexões"
+                            globalFilter={filtroGlobal}
+                            filters={{}}
+                            emptyMessage="Nenhuma conexão encontrada."
+                            header={cabecalho}
+                            loading={carregando}
+                            responsiveLayout="scroll"
+                        >
+                            <Column
+                                field="nm_piezometro"
+                                header="Nome Zeus"
+                                sortable
+                                headerStyle={{ minWidth: "12rem" }}
+                            />
+                            <Column
+                                field="id_piezometro"
+                                header="Descrição Zeus"
+                                sortable
+                                headerStyle={{ minWidth: "15rem" }}
+                            />
+                            <Column
+                                field="identificacao"
+                                header="Rd Lab (Identificação)"
+                                sortable
+                                headerStyle={{ minWidth: "15rem" }}
+                            />
+                            <Column
+                                body={botoesAcao}
+                                exportable={false}
+                                style={{ minWidth: "8rem" }}
+                            />
+                        </DataTable>
+                    </div>
+
+                    {/* Tabela de piezômetros sem conexão */}
+                    <div style={{ display: listandoConectados ? "none" : "block" }}>
+                        <DataTable
+                            value={naoConectados}
+                            dataKey="cd_piezometro"
+                            paginator
+                            rows={10}
+                            rowsPerPageOptions={[5, 10, 25]}
+                            className="datatable-responsive"
+                            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} piezômetros"
+                            globalFilter={filtroGlobal}
+                            filters={{}}
+                            emptyMessage="Nenhum piezômetro sem conexão."
+                            header={cabecalho}
+                            loading={carregando}
+                            responsiveLayout="scroll"
+                        >
+                            <Column
+                                field="nm_piezometro"
+                                header="Nome Zeus"
+                                sortable
+                                headerStyle={{ minWidth: "12rem" }}
+                            />
+                            <Column
+                                field="id_piezometro"
+                                header="Descrição Zeus"
+                                sortable
+                                headerStyle={{ minWidth: "15rem" }}
+                            />
+                            <Column
+                                field="cd_piezometro"
+                                header="Código"
+                                sortable
+                                headerStyle={{ minWidth: "8rem" }}
+                            />
+                            <Column
+                                body={botaoConectar}
+                                header=""
+                                exportable={false}
+                                style={{ minWidth: "4rem" }}
+                            />
+                        </DataTable>
+                    </div>
 
                     <Dialog
                         visible={exibirDialogo}
