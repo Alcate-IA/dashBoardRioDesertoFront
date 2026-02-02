@@ -55,6 +55,16 @@ const AppMenu = () => {
         },
       ],
     },
+    {
+      label: "Cadastros",
+      items: [
+        {
+          label: "Conexão Zeus-RD Lab",
+          to: "/pages/conexao-zeus-rdlab",
+          icon: "pi pi-fw pi-link"
+        }
+      ]
+    }
   ];
 
 
