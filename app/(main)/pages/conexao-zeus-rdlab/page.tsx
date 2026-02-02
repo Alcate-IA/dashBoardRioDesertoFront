@@ -11,6 +11,7 @@ import { InputText } from "primereact/inputtext";
 import { Dialog } from "primereact/dialog";
 import { classNames } from "primereact/utils";
 import Swal from "sweetalert2";
+import axios from "axios";
 import {
     buscarPiezometrosConectados,
     buscarPiezometrosZeus,
@@ -184,13 +185,19 @@ export default function ConexaoZeusRdLabPage() {
 
             fecharDialogo();
             carregarDadosIniciais();
-        } catch (erro) {
+        } catch (erro: unknown) {
             console.error("Erro ao salvar conexão:", erro);
+            const mensagem =
+                axios.isAxiosError(erro) &&
+                erro.response?.status === 409 &&
+                typeof erro.response?.data?.message === "string"
+                    ? erro.response.data.message
+                    : "Falha ao salvar a conexão.";
             toast.current?.show({
                 severity: "error",
-                summary: "Erro",
-                detail: "Falha ao salvar a conexão.",
-                life: 3000
+                summary: "Conflito",
+                detail: mensagem,
+                life: 6000
             });
         }
     };
