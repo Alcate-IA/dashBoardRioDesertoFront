@@ -321,7 +321,7 @@ export default function ConexaoZeusRdLabPage() {
                     >
                         <div className="field mb-4">
                             <label htmlFor="zeus" className="font-bold">
-                                Zeus (nm_piezometro - id_piezometro)
+                                Zeus:
                             </label>
                             <Dropdown
                                 id="zeus"
@@ -335,16 +335,11 @@ export default function ConexaoZeusRdLabPage() {
                                 disabled={editando}
                                 className={classNames({ "p-invalid": !formulario.idZeus })}
                             />
-                            {editando && (
-                                <small className="text-secondary">
-                                    O piezômetro Zeus não pode ser alterado durante a edição.
-                                </small>
-                            )}
                         </div>
 
                         <div className="field">
                             <label htmlFor="rdlab" className="font-bold">
-                                Rd Lab (Identificação)
+                                Rd Lab:
                             </label>
                             <Dropdown
                                 id="rdlab"
