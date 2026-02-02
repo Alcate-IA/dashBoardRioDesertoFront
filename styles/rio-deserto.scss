@@ -856,3 +856,24 @@ body {
 .swal-above-modal {
     z-index: 1300 !important;
 }
+
+/* Qualidade Água: remove borda azul ao redor do conteúdo das abas */
+.qualidade-agua-tabview.p-tabview {
+    border: none !important;
+}
+.qualidade-agua-tabview .p-tabview-nav {
+    border-color: #333 !important;
+    border-width: 0 0 1px 0 !important;
+}
+.qualidade-agua-tabview .p-tabview-nav li .p-tabview-nav-link {
+    border-color: transparent transparent #333 transparent !important;
+}
+.qualidade-agua-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+    border-color: transparent transparent var(--rio-deserto-primary) transparent !important;
+    color: var(--rio-deserto-primary) !important;
+}
+.qualidade-agua-tabview .p-tabview-panels {
+    background: transparent !important;
+    border: none !important;
+    padding: 1rem 0 0 0 !important;
+}
