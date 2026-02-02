@@ -27,7 +27,7 @@ export const useFiltrosEParametrosQualidadeAgua = ({
 }: PropriedadesIniciais) => {
     const [tipoFiltroSelecionado, setTipoFiltroSelecionado] = useState<string | null>(null);
     const [situacao, setSituacao] = useState<string | null>('A');
-    const [pontoSelecionado, setPontoSelecionado] = useState<number | null>(null);
+    const [pontosSelecionados, setPontosSelecionados] = useState<number[]>([]);
     const [dataInicio, setDataInicio] = useState<Date | null>(null);
     const [dataFim, setDataFim] = useState<Date | null>(null);
     const [pontos, setPontos] = useState<any[]>([]);
@@ -62,10 +62,8 @@ export const useFiltrosEParametrosQualidadeAgua = ({
                 }));
                 setPontos(formatados);
                 
-                // Se o ponto selecionado não estiver na nova lista, limpa a seleção
-                if (pontoSelecionado && !formatados.find((p: any) => p.value === pontoSelecionado)) {
-                    setPontoSelecionado(null);
-                }
+                // Remove da seleção os pontos que não estão mais na lista
+                setPontosSelecionados(prev => prev.filter(id => formatados.some((p: any) => p.value === id)));
             } catch (erro) {
                 console.error("Erro ao buscar pontos de monitoramento:", erro);
                 setPontos([]);
@@ -75,6 +73,7 @@ export const useFiltrosEParametrosQualidadeAgua = ({
         };
         buscarPontos();
     }, [tipoFiltroSelecionado, situacao]);
+    const pontoSelecionado = pontosSelecionados.length > 0 ? pontosSelecionados[0] : null;
 
     // Carrega parâmetros da legislação ao montar o componente
     useEffect(() => {
@@ -97,12 +96,16 @@ export const useFiltrosEParametrosQualidadeAgua = ({
 
     // Aplica valores iniciais vindos das props de navegação
     useEffect(() => {
-        if (idPiezometroInicial) setPontoSelecionado(idPiezometroInicial);
+        if (idPiezometroInicial) setPontosSelecionados(prev => prev.includes(idPiezometroInicial) ? prev : [idPiezometroInicial]);
         const dataInic = converterMesAnoParaData(mesAnoInicioInicial);
         const dataFinal = converterMesAnoParaData(mesAnoFimInicial);
         if (dataInic) setDataInicio(dataInic);
         if (dataFinal) setDataFim(dataFinal);
     }, [idPiezometroInicial, mesAnoInicioInicial, mesAnoFimInicial]);
+
+    const aoMudarPontos = (ids: number[] | null) => {
+        setPontosSelecionados(ids && ids.length > 0 ? ids : []);
+    };
 
     return {
         tipoFiltroSelecionado,
@@ -111,7 +114,8 @@ export const useFiltrosEParametrosQualidadeAgua = ({
         setSituacao,
         opcoesFiltroSituacao,
         pontoSelecionado,
-        setPontoSelecionado,
+        pontosSelecionados,
+        aoMudarPontos,
         dataInicio,
         setDataInicio,
         dataFim,

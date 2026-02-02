@@ -3,6 +3,7 @@
 import React from "react";
 import { Calendar } from "primereact/calendar";
 import { Dropdown } from "primereact/dropdown";
+import { MultiSelect } from "primereact/multiselect";
 import { Button } from "primereact/button";
 import { Checkbox } from "primereact/checkbox";
 import { useBarraFiltrosQualidadeAgua } from "@/hooks/useBarraFiltrosQualidadeAgua";
@@ -39,8 +40,8 @@ interface PropriedadesBarraFiltros {
     aoMudarSituacao: (valor: string | null) => void;
 
     pontos: PontoMonitoramento[];
-    pontoSelecionado: number | null;
-    aoMudarPonto: (valor: number) => void;
+    pontosSelecionados: number[];
+    aoMudarPontos: (valor: number[] | null) => void;
     estaCarregando: boolean;
 
     dataInicio: Date | null;
@@ -68,8 +69,8 @@ export default function BarraFiltros({
     tipoFiltroSelecionado,
     aoMudarTipoFiltro,
     pontos,
-    pontoSelecionado,
-    aoMudarPonto,
+    pontosSelecionados,
+    aoMudarPontos,
     estaCarregando,
     dataInicio,
     dataFim,
@@ -90,90 +91,120 @@ export default function BarraFiltros({
     return (
         <div className="flex flex-column gap-3">
             <div className="card filter-bar">
-                <div className="filter-item">
-                    <span className="filter-label">Visualização</span>
-                    <Dropdown
-                        value={tipoFiltroSelecionado}
-                        options={opcoesFiltro}
-                        onChange={(e) => aoMudarTipoFiltro(e.value)}
-                        placeholder="Selecione o tipo"
-                        className="w-full md:w-15rem"
-                        showClear
-                    />
-                </div>
-
-                <div className="filter-item">
-                    <span className="filter-label">Situação</span>
-                    <Dropdown
-                        value={situacaoSelecionada}
-                        options={opcoesFiltroSituacao}
-                        onChange={(e) => aoMudarSituacao(e.value)}
-                        placeholder="Selecione a situação"
-                        className="w-full md:w-15rem"
-                        showClear
-                    />
-                </div>
-
-                <div className="filter-item">
-                    <span className="filter-label">Ponto de Monitoramento</span>
-                    <Dropdown
-                        value={pontoSelecionado}
-                        options={pontos}
-                        onChange={(e) => aoMudarPonto(e.value)}
-                        placeholder={estaCarregando ? "Carregando..." : "Selecione..."}
-                        className="w-full md:w-14rem"
-                        filter
-                        showClear
-                        disabled={estaCarregando}
-                        panelClassName="dropdown-panel-mobile"
-                        appendTo="self"
-                    />
-                </div>
-
-                <div className="filter-item">
-                    <span className="filter-label">Período</span>
-                    <div className="flex gap-2">
-                        <Calendar
-                            value={dataInicio}
-                            onChange={(e: any) => aoMudarDataInicio(e.value)}
-                            dateFormat="mm/yy"
-                            view="month"
-                            placeholder="Início"
-                            showIcon
-                            panelClassName="calendar-panel-fixed"
-                            appendTo="self"
+                <div className="filter-bar-row">
+                    <div className="filter-item">
+                        <span className="filter-label">Visualização</span>
+                        <Dropdown
+                            value={tipoFiltroSelecionado}
+                            options={opcoesFiltro}
+                            onChange={(e) => aoMudarTipoFiltro(e.value)}
+                            placeholder="Selecione o tipo"
+                            className="w-full md:w-15rem"
+                            showClear
                         />
-                        <Calendar
-                            value={dataFim}
-                            onChange={(e: any) => aoMudarDataFim(e.value)}
-                            dateFormat="mm/yy"
-                            view="month"
-                            placeholder="Fim"
-                            showIcon
-                            panelClassName="calendar-panel-fixed"
-                            appendTo="self"
+                    </div>
+
+                    <div className="filter-item">
+                        <span className="filter-label">Situação</span>
+                        <Dropdown
+                            value={situacaoSelecionada}
+                            options={opcoesFiltroSituacao}
+                            onChange={(e) => aoMudarSituacao(e.value)}
+                            placeholder="Selecione a situação"
+                            className="w-full md:w-15rem"
+                            showClear
+                        />
+                    </div>
+
+                    <div className="filter-item filter-item-piezometro">
+                        <span className="filter-label">Ponto(s) de Monitoramento</span>
+                        <div className="piezometro-campo-wrapper">
+                            <MultiSelect
+                                value={pontosSelecionados}
+                                options={pontos}
+                                onChange={(e) => aoMudarPontos(e.value)}
+                                placeholder={estaCarregando ? "Carregando..." : "Selecione um ou mais..."}
+                                className="w-full md:w-18rem piezometro-select-sem-chip"
+                                filter
+                                showClear
+                                disabled={estaCarregando}
+                                panelClassName="dropdown-panel-mobile"
+                                selectedItemsLabel={
+                                    pontosSelecionados.length > 1 ? "{0} pontos selecionados" : undefined
+                                }
+                            />
+                        </div>
+                    </div>
+
+                    <div className="filter-item">
+                        <span className="filter-label">Período</span>
+                        <div className="flex gap-2">
+                            <Calendar
+                                value={dataInicio}
+                                onChange={(e: any) => aoMudarDataInicio(e.value)}
+                                dateFormat="mm/yy"
+                                view="month"
+                                placeholder="Início"
+                                showIcon
+                                panelClassName="calendar-panel-fixed"
+                                appendTo="self"
+                            />
+                            <Calendar
+                                value={dataFim}
+                                onChange={(e: any) => aoMudarDataFim(e.value)}
+                                dateFormat="mm/yy"
+                                view="month"
+                                placeholder="Fim"
+                                showIcon
+                                panelClassName="calendar-panel-fixed"
+                                appendTo="self"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="ml-auto flex align-items-center gap-3">
+                        <a
+                            href="#"
+                            className="text-primary font-bold no-underline"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                alternarVisibilidadeFiltros();
+                            }}
+                        >
+                            {mostrarFiltrosExtras ? "Fechar Filtros" : "Filtros"}
+                        </a>
+                        <Button
+                            label="APLICAR"
+                            onClick={aoBuscar}
+                            className="p-button-warning font-bold"
+                            disabled={estaCarregando}
                         />
                     </div>
                 </div>
 
-                <div className="ml-auto flex align-items-center gap-3">
-                    <a
-                        href="#"
-                        className="text-primary font-bold no-underline"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            alternarVisibilidadeFiltros();
-                        }}
-                    >
-                        {mostrarFiltrosExtras ? "Fechar Filtros" : "Filtros"}
-                    </a>
-                    <Button
-                        label="APLICAR"
-                        onClick={aoBuscar}
-                        className="p-button-warning font-bold"
-                        disabled={estaCarregando}
-                    />
-                </div>
+                {pontosSelecionados.length > 0 && (
+                    <div className="filter-bar-selecionados-row">
+                        <ul className="lista-piezometros-selecionados">
+                            {pontosSelecionados.map((id) => {
+                                const item = pontos.find((p) => p.value === id);
+                                const label = item?.label ?? String(id);
+                                return (
+                                    <li key={id}>
+                                        <span>{label}</span>
+                                        <button
+                                            type="button"
+                                            className="p-button p-button-text p-button-rounded p-button-icon-only p-button-sm"
+                                            onClick={() => aoMudarPontos(pontosSelecionados.filter((x) => x !== id))}
+                                            aria-label="Remover ponto"
+                                        >
+                                            <i className="pi pi-times" />
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                )}
             </div>
 
             {mostrarFiltrosExtras && (
