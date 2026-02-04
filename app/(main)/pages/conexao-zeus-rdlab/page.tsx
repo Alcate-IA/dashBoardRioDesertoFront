@@ -6,7 +6,6 @@ import { Column } from "primereact/column";
 import { DataTable } from "primereact/datatable";
 import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
-import { Toolbar } from "primereact/toolbar";
 import { InputText } from "primereact/inputtext";
 import { Dialog } from "primereact/dialog";
 import { classNames } from "primereact/utils";
@@ -308,25 +307,10 @@ export default function ConexaoZeusRdLabPage() {
         );
     };
 
-    const cabecalho = (
-        <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-            <h5 className="m-0">
-                {listandoConectados ? "Conexões Zeus - Rd Lab" : "Piezômetros Zeus sem conexão"}
-            </h5>
-            <span className="block mt-2 md:mt-0 p-input-icon-left">
-                <i className="pi pi-search" />
-                <InputText
-                    type="search"
-                    onInput={(e) => setFiltroGlobal(e.currentTarget.value)}
-                    placeholder="Pesquisar..."
-                />
-            </span>
-        </div>
-    );
-
-    const toolbarEsquerda = () => {
-        return (
-            <div className="flex gap-2 align-items-center">
+    const cabecalhoConectados = (
+        <div className="flex flex-wrap align-items-center justify-content-between gap-2">
+            <h5 className="m-0">Conexões Zeus - Rd Lab</h5>
+            <div className="flex align-items-center gap-2 flex-wrap">
                 <Button
                     label="Nova Conexão"
                     icon="pi pi-plus"
@@ -334,14 +318,52 @@ export default function ConexaoZeusRdLabPage() {
                     onClick={abrirNovo}
                 />
                 <Button
-                    label={listandoConectados ? "Listar não conectados" : "Listar conectados"}
-                    icon={listandoConectados ? "pi pi-list" : "pi pi-check-circle"}
-                    severity={listandoConectados ? "warning" : "success"}
+                    label="Listar não conectados"
+                    icon="pi pi-list"
+                    severity="secondary"
                     onClick={alternarLista}
                 />
+                <span className="p-input-icon-left">
+                    <i className="pi pi-search" />
+                    <InputText
+                        type="search"
+                        value={filtroGlobal}
+                        onInput={(e) => setFiltroGlobal(e.currentTarget.value)}
+                        placeholder="Pesquisar..."
+                    />
+                </span>
             </div>
-        );
-    };
+        </div>
+    );
+
+    const cabecalhoNaoConectados = (
+        <div className="flex flex-wrap align-items-center justify-content-between gap-2">
+            <h5 className="m-0">Piezômetros Zeus sem conexão</h5>
+            <div className="flex align-items-center gap-2 flex-wrap">
+                <Button
+                    label="Nova Conexão"
+                    icon="pi pi-plus"
+                    severity="success"
+                    onClick={abrirNovo}
+                />
+                <Button
+                    label="Listar conectados"
+                    icon="pi pi-check-circle"
+                    severity="secondary"
+                    onClick={alternarLista}
+                />
+                <span className="p-input-icon-left">
+                    <i className="pi pi-search" />
+                    <InputText
+                        type="search"
+                        value={filtroGlobal}
+                        onInput={(e) => setFiltroGlobal(e.currentTarget.value)}
+                        placeholder="Pesquisar..."
+                    />
+                </span>
+            </div>
+        </div>
+    );
 
     const rodapeDialogo = (
         <div className="flex justify-content-end gap-2">
@@ -364,29 +386,27 @@ export default function ConexaoZeusRdLabPage() {
     return (
         <div className="grid">
             <div className="col-12">
-                <div className="card">
-                    <Toast ref={toast} />
+                <Toast ref={toast} />
 
-                    <Toolbar className="mb-4" left={toolbarEsquerda}></Toolbar>
-
-                    {/* Tabela de conexões (conectados) */}
-                    <div style={{ display: listandoConectados ? "block" : "none" }}>
-                        <DataTable
-                            value={conexoes}
-                            dataKey="id_conexao"
-                            paginator
-                            rows={10}
-                            rowsPerPageOptions={[5, 10, 25]}
-                            className="datatable-responsive"
-                            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} conexões"
-                            globalFilter={filtroGlobal}
-                            filters={{}}
-                            emptyMessage="Nenhuma conexão encontrada."
-                            header={cabecalho}
-                            loading={carregando}
-                            responsiveLayout="scroll"
-                        >
+                {/* Card: Conexões (conectados) */}
+                <div className="card card-borda-branca mb-3" style={{ display: listandoConectados ? "block" : "none" }}>
+                    <DataTable
+                        value={conexoes}
+                        dataKey="id_conexao"
+                        paginator
+                        rows={10}
+                        rowsPerPageOptions={[5, 10, 25]}
+                        className="datatable-responsive datatable-pesquisa-rodape"
+                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} conexões"
+                        globalFilter={filtroGlobal}
+                        globalFilterFields={["nm_piezometro", "id_piezometro", "identificacao"]}
+                        filters={{}}
+                        emptyMessage="Nenhuma conexão encontrada."
+                        header={cabecalhoConectados}
+                        loading={carregando}
+                        responsiveLayout="scroll"
+                    >
                             <Column
                                 field="nm_piezometro"
                                 header="Nome Zeus"
@@ -410,27 +430,28 @@ export default function ConexaoZeusRdLabPage() {
                                 exportable={false}
                                 style={{ minWidth: "8rem" }}
                             />
-                        </DataTable>
-                    </div>
+                    </DataTable>
+                </div>
 
-                    {/* Tabela de piezômetros sem conexão */}
-                    <div style={{ display: listandoConectados ? "none" : "block" }}>
-                        <DataTable
-                            value={naoConectados}
-                            dataKey="cd_piezometro"
-                            paginator
-                            rows={10}
-                            rowsPerPageOptions={[5, 10, 25]}
-                            className="datatable-responsive"
-                            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} piezômetros"
-                            globalFilter={filtroGlobal}
-                            filters={{}}
-                            emptyMessage="Nenhum piezômetro sem conexão."
-                            header={cabecalho}
-                            loading={carregando}
-                            responsiveLayout="scroll"
-                        >
+                {/* Card: Piezômetros sem conexão */}
+                <div className="card card-borda-branca mb-3" style={{ display: listandoConectados ? "none" : "block" }}>
+                    <DataTable
+                        value={naoConectados}
+                        dataKey="cd_piezometro"
+                        paginator
+                        rows={10}
+                        rowsPerPageOptions={[5, 10, 25]}
+                        className="datatable-responsive datatable-pesquisa-rodape"
+                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} piezômetros"
+                        globalFilter={filtroGlobal}
+                        globalFilterFields={["nm_piezometro", "id_piezometro"]}
+                        filters={{}}
+                        emptyMessage="Nenhum piezômetro sem conexão."
+                        header={cabecalhoNaoConectados}
+                        loading={carregando}
+                        responsiveLayout="scroll"
+                    >
                             <Column
                                 field="nm_piezometro"
                                 header="Nome Zeus"
@@ -455,10 +476,10 @@ export default function ConexaoZeusRdLabPage() {
                                 exportable={false}
                                 style={{ minWidth: "4rem" }}
                             />
-                        </DataTable>
-                    </div>
+                    </DataTable>
+                </div>
 
-                    <Dialog
+                <Dialog
                         visible={exibirDialogo}
                         style={{ width: "500px" }}
                         header={editando ? "Editar Conexão" : "Nova Conexão"}
@@ -501,8 +522,7 @@ export default function ConexaoZeusRdLabPage() {
                                 className={classNames({ "p-invalid": !formulario.idRdLab })}
                             />
                         </div>
-                    </Dialog>
-                </div>
+                </Dialog>
             </div>
         </div>
     );
