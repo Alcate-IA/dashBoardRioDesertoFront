@@ -51,19 +51,11 @@ export const excluirTipoClassificacao = (id: number) => {
 };
 
 /**
- * Lista piezômetros não classificados com tipo de água.
- * @returns Promise com a lista de piezômetros
+ * Lista piezômetros por tipo de água (classificados e não classificados em uma chamada).
+ * @returns Promise com { classificados, naoClassificados }
  */
-export const buscarPiezometrosNaoClassificadosComTipoAgua = () => {
-    return rota.get("/piezometros/piezometros-nao-classificados-com-tipo-agua");
-};
-
-/**
- * Lista piezômetros classificados com tipo de água.
- * @returns Promise com a lista de piezômetros
- */
-export const buscarPiezometrosClassificadosComTipoAgua = () => {
-    return rota.get("/piezometros/piezometros-classificados-com-tipo-agua");
+export const buscarPiezometrosTipoAgua = () => {
+    return rota.get("/piezometros/tipo-agua");
 };
 
 /**
