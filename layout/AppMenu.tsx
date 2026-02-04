@@ -62,6 +62,11 @@ const AppMenu = () => {
           label: "Conexão Zeus-RD Lab",
           to: "/pages/conexao-zeus-rdlab",
           icon: "pi pi-fw pi-link"
+        },
+        {
+          label: "Classificação da água",
+          to: "/pages/tipo-classificacao-agua-piezometro",
+          icon: "pi pi-fw pi-tag"
         }
       ]
     }
