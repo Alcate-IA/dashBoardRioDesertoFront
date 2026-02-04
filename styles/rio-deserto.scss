@@ -34,11 +34,20 @@ body {
     border-radius: 8px !important;
 }
 
-/* Borda colada no conteúdo (sem espaço); mesma cor do tema, não branca */
+/* Borda colada no conteúdo (sem espaço); mesma cor do tema; conteúdo não estoura nos cantos */
 .card-borda-branca {
     border: 1px solid #333 !important;
     border-radius: 12px !important;
     padding: 0 !important;
+    overflow: hidden !important;
+}
+.card-borda-branca .p-datatable .p-datatable-header {
+    border-top-left-radius: 11px !important;
+    border-top-right-radius: 11px !important;
+}
+.card-borda-branca .p-datatable .p-paginator {
+    border-bottom-left-radius: 11px !important;
+    border-bottom-right-radius: 11px !important;
 }
 
 /* Filter Bar Styles */
