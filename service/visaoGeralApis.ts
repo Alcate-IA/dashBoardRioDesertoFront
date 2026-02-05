@@ -24,3 +24,7 @@ export const apiDadosDaVazaoDaMina = () => {
 export const apiPiozometrosAtrasados = () => {
     return rota.get("/api/inspecao-piezometro-freq/atrasados");
 };
+
+export const apiGraficoVazaoPrecipitacao = () => {
+    return rota.get("/api/geral/grafico-vazao-x-precipitacao");
+};

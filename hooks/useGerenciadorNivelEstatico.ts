@@ -10,7 +10,6 @@ import {
 } from "@/service/nivelEstaticoApis";
 import { formatarData } from "@/utils/formatarData";
 import { useFiltrosNivelEstatico } from "./useFiltrosNivelEstatico";
-import { useConfiguracaoGraficoNivelEstatico } from "./useConfiguracaoGraficoNivelEstatico";
 
 interface SumarioNivelEstatico {
     nivelEstatico: number;
@@ -20,6 +19,17 @@ interface SumarioNivelEstatico {
     vazaoMina: number;
     vazao: number;
     total: number;
+}
+
+export interface ResultadoPiezometro {
+    id: number;
+    label: string;
+    tipo: string | null;
+    tabelaDados: any[];
+    analiseIA: string | null;
+    analiseOriginalIA: string | null;
+    fotosInspecao: any[];
+    sumario: SumarioNivelEstatico;
 }
 
 /**
@@ -40,11 +50,12 @@ export const useGerenciadorNivelEstatico = () => {
         piezometros,
         estaCarregandoOpcoes,
         opcoesFiltroTipo,
+        opcoesFiltroSituacao,
         atualizarFiltros,
-        aoSelecionarPiezometro
+        aoMudarPiezometros
     } = useFiltrosNivelEstatico();
 
-    // 2. Estados de Dados e Resultados
+    // 2. Estados de Dados e Resultados (modo único piezômetro)
     const [estaCarregando, setEstaCarregando] = useState(false);
     const [tabelaDados, setTabelaDados] = useState<any[]>([]);
     const [sumario, setSumario] = useState<SumarioNivelEstatico>({
@@ -66,17 +77,13 @@ export const useGerenciadorNivelEstatico = () => {
     const [fotosInspecao, setFotosInspecao] = useState<any[]>([]);
     const [estaCarregandoFotos, setEstaCarregandoFotos] = useState(false);
 
-    // 3. Ferramenta de Configuração Visual do Gráfico
-    // PB (Piezômetro de Bacia) compartilha a mesma estrutura de dados do PP (Piezômetro de Profundidade)
-    const tipoParaGrafico = filtros.tipoSelecionado === 'PB' ? 'PP' : filtros.tipoSelecionado;
+    // Resultados por piezômetro (modo múltiplos)
+    const [resultadosPorPiezometro, setResultadosPorPiezometro] = useState<Record<number, ResultadoPiezometro>>({});
 
-    const { dadosGrafico, opcoesGrafico } = useConfiguracaoGraficoNivelEstatico(
-        tabelaDados,
-        tipoParaGrafico,
-        filtros.porDia,
-        filtros.dataInicio,
-        filtros.dataFim
-    );
+    // True quando o usuário clicou em Aplicar e a API retornou vazio (dadosFiltrados vazio)
+    const [ultimaBuscaRetornouVazio, setUltimaBuscaRetornouVazio] = useState(false);
+
+    // Configuração do gráfico é feita no componente (permite usar dados da aba ativa em modo múltiplos)
 
     const processarDadosDiarios = (dadosBrutos: any) => {
         if (!dadosBrutos || Array.isArray(dadosBrutos)) return dadosBrutos;
@@ -124,10 +131,95 @@ export const useGerenciadorNivelEstatico = () => {
         return resultado;
     };
 
-    // Função de execução da busca principal
+    const sumarioVazio = (): SumarioNivelEstatico => ({
+        nivelEstatico: 0,
+        cotaSuperficie: 0,
+        cotaBase: 0,
+        precipitacao: 0,
+        vazaoMina: 0,
+        vazao: 0,
+        total: 0
+    });
+
+    /** Busca dados de um único piezômetro (API + IA + fotos) e retorna resultado. */
+    const buscarUmPiezometro = useCallback(async (
+        cdPiezometro: number,
+        nomeExibicao: string,
+        f: { dataInicio: Date | null; dataFim: Date | null; porDia: boolean }
+    ): Promise<ResultadoPiezometro> => {
+        const inicioStr = formatarData(f.dataInicio!, f.porDia);
+        const fimStr = formatarData(f.dataFim!, f.porDia);
+        const inicioFotos = formatarData(f.dataInicio!, true);
+        const fimFotos = formatarData(f.dataFim!, true);
+
+        const api = f.porDia
+            ? getPiezometroDiarioApi(cdPiezometro, inicioStr, fimStr)
+            : getPiezometroFiltroComHistoricoApi(cdPiezometro, inicioStr, fimStr);
+
+        const resposta = await api;
+        const dadosBrutosFiltrados = resposta.data.dadosFiltrados || [];
+        const historicoIA = resposta.data.historicoCompleto || [];
+
+        let dadosProcessados = f.porDia ? processarDadosDiarios(dadosBrutosFiltrados) : dadosBrutosFiltrados;
+        dadosProcessados = [...(Array.isArray(dadosProcessados) ? dadosProcessados : [])].sort(
+            (a, b) => new Date(a.mes_ano).getTime() - new Date(b.mes_ano).getTime()
+        );
+
+        let analiseIAVal: string | null = null;
+        const temDadosParaIA = f.porDia
+            ? (dadosBrutosFiltrados?.nivel_estatico?.length > 0 || dadosBrutosFiltrados?.precipitacao?.length > 0)
+            : (dadosProcessados.length > 0);
+
+        if (temDadosParaIA) {
+            const dadosEntradaIA = f.porDia ? dadosBrutosFiltrados : dadosProcessados;
+            const respostaIA = await webHookIAAnaliseNivelEstatico(dadosEntradaIA, cdPiezometro, historicoIA);
+            if (Array.isArray(respostaIA) && respostaIA[0]?.output) {
+                analiseIAVal = respostaIA[0].output;
+            }
+        }
+
+        const total = dadosProcessados.length;
+        let sumarioVal = sumarioVazio();
+        if (total > 0) {
+            const soma = (campo: string) => dadosProcessados.reduce((acc: number, obj: any) => acc + (obj[campo] || 0), 0);
+            const media = (campo: string) => parseFloat((soma(campo) / total).toFixed(1));
+            sumarioVal = {
+                nivelEstatico: media('nivel_estatico'),
+                cotaSuperficie: media('cota_superficie'),
+                cotaBase: media('cota_base'),
+                precipitacao: media('precipitacao'),
+                vazaoMina: media('vazao_bombeamento'),
+                vazao: media('vazao_calha'),
+                total
+            };
+        }
+
+        let fotos: any[] = [];
+        try {
+            const resFotos = await getFotosInspecaoPiezometroApi(cdPiezometro, inicioFotos, fimFotos);
+            fotos = resFotos.data || [];
+        } catch {
+            fotos = [];
+        }
+
+        const tipo = piezometros.find(p => p.value === cdPiezometro)?.tipo ?? null;
+        return {
+            id: cdPiezometro,
+            label: nomeExibicao,
+            tipo,
+            tabelaDados: dadosProcessados,
+            analiseIA: analiseIAVal,
+            analiseOriginalIA: analiseIAVal,
+            fotosInspecao: fotos,
+            sumario: sumarioVal
+        };
+    }, [piezometros]);
+
+    // Função de execução da busca principal (um ou vários piezômetros)
     const aoBuscar = useCallback(async () => {
-        if (!filtros.idSelecionado) {
-            Swal.fire({ icon: "warning", title: "Selecione um piezômetro" });
+        const ids = filtros.idsSelecionados ?? [];
+        if (ids.length === 0) {
+            Swal.fire({ icon: "warning", title: "Selecione ao menos um piezômetro" });
             return;
         }
         if (!filtros.dataInicio || !filtros.dataFim) {
@@ -135,85 +227,69 @@ export const useGerenciadorNivelEstatico = () => {
             return;
         }
 
+        setEstaCarregando(true);
+        setEstaCarregandoIA(ids.length === 1);
+
         try {
-            Swal.fire({
-                title: 'Carregando...',
-                html: 'Buscando dados e solicitando análise da IA...',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
+            if (ids.length === 1) {
+                // Fluxo único: mesmo comportamento de antes + tranca com SweetAlert
+                const id = ids[0];
+                const nome = piezometros.find(p => p.value === id)?.label ?? String(id);
+                Swal.fire({
+                    title: 'Carregando...',
+                    html: `Buscando dados do piezômetro <strong>${nome}</strong>...`,
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
 
-            setEstaCarregando(true);
-            setEstaCarregandoIA(true);
-            setAnaliseIA(null);
-            setAnaliseOriginalIA(null);
+                setAnaliseIA(null);
+                setAnaliseOriginalIA(null);
+                const resultado = await buscarUmPiezometro(id, nome, filtros);
 
-            const inicioStr = formatarData(filtros.dataInicio, filtros.porDia);
-            const fimStr = formatarData(filtros.dataFim, filtros.porDia);
-
-            // 0. Chamada de Fotos de Inspeção
-            const inicioFotos = formatarData(filtros.dataInicio, true);
-            const fimFotos = formatarData(filtros.dataFim, true);
-            buscarFotosInspecao(inicioFotos, fimFotos);
-
-            // 1. Chamada da API Principal
-            const api = filtros.porDia
-                ? getPiezometroDiarioApi(filtros.idSelecionado, inicioStr, fimStr)
-                : getPiezometroFiltroComHistoricoApi(filtros.idSelecionado, inicioStr, fimStr);
-
-            const resposta = await api;
-            const dadosBrutosFiltrados = resposta.data.dadosFiltrados || [];
-            const historicoIA = resposta.data.historicoCompleto || [];
-
-            // 2. Processamento dos Dados
-            let dadosProcessados = filtros.porDia ? processarDadosDiarios(dadosBrutosFiltrados) : dadosBrutosFiltrados;
-
-            // Garantir ordenação cronológica para o gráfico
-            dadosProcessados = [...dadosProcessados].sort((a, b) => new Date(a.mes_ano).getTime() - new Date(b.mes_ano).getTime());
-
-            setTabelaDados(dadosProcessados);
-
-            // 3. IA - Análise Automática
-            const temDadosParaIA = filtros.porDia
-                ? (dadosBrutosFiltrados.nivel_estatico?.length > 0 || dadosBrutosFiltrados.precipitacao?.length > 0)
-                : (dadosProcessados.length > 0);
-
-            if (temDadosParaIA) {
-                const dadosEntradaIA = filtros.porDia ? dadosBrutosFiltrados : dadosProcessados;
-                const respostaIA = await webHookIAAnaliseNivelEstatico(dadosEntradaIA, filtros.idSelecionado, historicoIA);
-
-                if (Array.isArray(respostaIA) && respostaIA[0]?.output) {
-                    setAnaliseIA(respostaIA[0].output);
-                    setAnaliseOriginalIA(respostaIA[0].output);
-                    Swal.close();
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'IA Indisponível',
-                        text: 'A análise da IA falhou, mas os dados do gráfico foram carregados.'
-                    });
-                }
+                setTabelaDados(resultado.tabelaDados);
+                setAnaliseIA(resultado.analiseIA);
+                setAnaliseOriginalIA(resultado.analiseOriginalIA);
+                setFotosInspecao(resultado.fotosInspecao);
+                setSumario(resultado.sumario);
+                setResultadosPorPiezometro({ [id]: resultado });
+                setUltimaBuscaRetornouVazio(resultado.tabelaDados.length === 0);
+                Swal.close();
             } else {
+                // Múltiplos: sequencial com progresso no SweetAlert
+                const total = ids.length;
+                Swal.fire({
+                    title: 'Carregando...',
+                    html: `Buscando dados do piezômetro...<br><span id="swal-piezometro-nome"></span><br><strong id="swal-progresso">0/${total} piezômetros prontos</strong>`,
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                const novosResultados: Record<number, ResultadoPiezometro> = {};
+                for (let i = 0; i < ids.length; i++) {
+                    const id = ids[i];
+                    const nome = piezometros.find(p => p.value === id)?.label ?? String(id);
+
+                    const container = document.getElementById('swal-piezometro-nome');
+                    const progressoEl = document.getElementById('swal-progresso');
+                    if (container) container.textContent = `Buscando dados do piezômetro ${nome}`;
+                    if (progressoEl) progressoEl.textContent = `${i}/${total} piezômetros prontos`;
+
+                    const resultado = await buscarUmPiezometro(id, nome, filtros);
+                    novosResultados[id] = resultado;
+
+                    if (progressoEl) progressoEl.textContent = `${i + 1}/${total} piezômetros prontos`;
+                }
+
+                setResultadosPorPiezometro(novosResultados);
+                setTabelaDados([]);
+                setAnaliseIA(null);
+                setAnaliseOriginalIA(null);
+                setFotosInspecao([]);
+                setSumario(sumarioVazio());
+                const todosVazios = Object.values(novosResultados).every(r => r.tabelaDados.length === 0);
+                setUltimaBuscaRetornouVazio(todosVazios);
                 Swal.close();
             }
-
-            // 4. Cálculo do Sumário de Médias
-            const total = dadosProcessados.length;
-            if (total > 0) {
-                const soma = (campo: string) => dadosProcessados.reduce((acc: number, obj: any) => acc + (obj[campo] || 0), 0);
-                const media = (campo: string) => parseFloat((soma(campo) / total).toFixed(1));
-
-                setSumario({
-                    nivelEstatico: media('nivel_estatico'),
-                    cotaSuperficie: media('cota_superficie'),
-                    cotaBase: media('cota_base'),
-                    precipitacao: media('precipitacao'),
-                    vazaoMina: media('vazao_bombeamento'),
-                    vazao: media('vazao_calha'),
-                    total
-                });
-            }
-
         } catch (erro) {
             console.error("Erro na busca de Nível Estático:", erro);
             Swal.fire({ icon: "error", title: "Erro na Busca", text: "Não foi possível carregar os dados do relatório." });
@@ -221,34 +297,17 @@ export const useGerenciadorNivelEstatico = () => {
             setEstaCarregando(false);
             setEstaCarregandoIA(false);
         }
-    }, [filtros]);
-
-    // Função interna para busca de fotos
-    const buscarFotosInspecao = useCallback(async (inicio: string, fim: string) => {
-        if (!filtros.idSelecionado) {
-            setFotosInspecao([]);
-            return;
-        }
-
-        setEstaCarregandoFotos(true);
-        try {
-            const resposta = await getFotosInspecaoPiezometroApi(filtros.idSelecionado, inicio, fim);
-            setFotosInspecao(resposta.data || []);
-        } catch (erro) {
-            console.error("Erro ao buscar fotos de inspeção:", erro);
-            setFotosInspecao([]);
-        } finally {
-            setEstaCarregandoFotos(false);
-        }
-    }, [filtros.idSelecionado]);
+    }, [filtros, piezometros, buscarUmPiezometro]);
 
     // Limpa os resultados atuais se qualquer filtro for alterado (Garante proteção de dados)
     useEffect(() => {
         setTabelaDados([]);
         setAnaliseIA(null);
         setAnaliseOriginalIA(null);
-        setSumario({ nivelEstatico: 0, cotaSuperficie: 0, cotaBase: 0, precipitacao: 0, vazaoMina: 0, vazao: 0, total: 0 });
+        setSumario(sumarioVazio());
         setFotosInspecao([]);
+        setResultadosPorPiezometro({});
+        setUltimaBuscaRetornouVazio(false);
     }, [filtros]);
 
     return {
@@ -257,10 +316,11 @@ export const useGerenciadorNivelEstatico = () => {
         piezometros,
         estaCarregandoOpcoes,
         opcoesFiltroTipo,
+        opcoesFiltroSituacao,
         atualizarFiltros,
-        aoSelecionarPiezometro,
+        aoMudarPiezometros,
 
-        // Resultados e Status
+        // Resultados e Status (modo único)
         estaCarregando,
         tabelaDados,
         sumario,
@@ -269,15 +329,27 @@ export const useGerenciadorNivelEstatico = () => {
         setAnaliseIA,
         estaCarregandoIA,
 
-        // Fotos de Inspeção
+        // Fotos de Inspeção (modo único)
         fotosInspecao,
         estaCarregandoFotos,
 
-        // Configuração do Gráfico (Chart.js)
-        dadosGrafico,
-        opcoesGrafico,
+        // Resultados por piezômetro (modo múltiplos) e lista para abas
+        resultadosPorPiezometro,
+        listaPiezometrosProntos: Object.values(resultadosPorPiezometro).map(r => ({ id: r.id, label: r.label })),
+
+        // Estado vazio: true quando a última busca retornou sem dados no BD
+        ultimaBuscaRetornouVazio,
 
         // Ações
-        aoBuscar
+        aoBuscar,
+
+        /** Atualiza a análise IA de um piezômetro no modo múltiplos (edição na aba). */
+        setAnaliseIAPiezometro: useCallback((id: number, texto: string | null) => {
+            setResultadosPorPiezometro(prev => {
+                const r = prev[id];
+                if (!r) return prev;
+                return { ...prev, [id]: { ...r, analiseIA: texto, analiseOriginalIA: texto ?? r.analiseOriginalIA } };
+            });
+        }, [])
     };
 };

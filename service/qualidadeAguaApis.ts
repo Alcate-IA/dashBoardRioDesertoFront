@@ -17,12 +17,16 @@ export const salvarAvaliacaoIAQualidadeAgua = async (dados: {
 };
 
 // Busca piezometros para o relatório de coleta (QualidadeAgua)
-export const getPiezometrosRelatorio = (tipos: string | string[] | null = null) => {
+export const getPiezometrosRdLab = (situacao: string | null = 'A', tipos: string | string[] | null = null) => {
     const params: any = {};
+    if (situacao) {
+        params.situacao = situacao;
+    }
+
     if (tipos) {
         params.tipos = Array.isArray(tipos) ? tipos.join(',') : tipos;
     }
-    return rota.get("/relatorios/piezometros-ativos", { params });
+    return rota.get("/piezometros/rd-lab-piezometros", { params });
 };
 
 // Usado no relatório de qualidade da água (QualidadeAgua)

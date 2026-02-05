@@ -2,16 +2,24 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getApiGeralContadores, apiGeralUltimosMovimentosRdLab, apiGeralUltimosMovimentosZeus, apiDadosDaVazaoDaMina, apiPiozometrosAtrasados } from "@/service/visaoGeralApis";
+import { getApiGeralContadores, apiGeralUltimosMovimentosRdLab, apiGeralUltimosMovimentosZeus, apiDadosDaVazaoDaMina, apiPiozometrosAtrasados, apiGraficoVazaoPrecipitacao } from "@/service/visaoGeralApis";
 import Swal from "sweetalert2";
 import { Carousel } from 'primereact/carousel';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Tag } from 'primereact/tag';
+import { Chart } from 'primereact/chart';
+import { Dialog } from 'primereact/dialog';
+import DetalhePiezometroZeusPopup from '@/components/DetalhePiezometroZeusPopup';
+import DetalheQualidadeAguaRdLabPopup from '@/components/DetalheQualidadeAguaRdLabPopup';
 
 interface ContadoresData {
     contadoresZeus: number;
     contadoresRdLab: number;
+    contadoresZeusAtivos: number;
+    contadoresZeusInativos: number;
+    contadoresRdLabAtivos: number;
+    contadoresRdLabInativos: number;
 }
 
 interface MovimentoRdLab {
@@ -88,15 +96,33 @@ interface PiezometroAtrasado {
     diasAtrasado: number;
 }
 
+interface DadosGraficoVazaoPrecipitacao {
+    mes_ano: string;
+    vazao_bombeamento: number;
+    precipitacao: number;
+}
+
+
 export default function GeralPage() {
     const router = useRouter();
-    const [contadores, setContadores] = useState<ContadoresData>({ contadoresZeus: 0, contadoresRdLab: 0 });
+    const [contadores, setContadores] = useState<ContadoresData>({
+        contadoresZeus: 0,
+        contadoresRdLab: 0,
+        contadoresRdLabAtivos: 0,
+        contadoresRdLabInativos: 0,
+        contadoresZeusAtivos: 0,
+        contadoresZeusInativos: 0
+    });
     const [movimentos, setMovimentos] = useState<MovimentoRdLab[]>([]);
     const [movimentosZeus, setMovimentosZeus] = useState<MovimentoZeus[]>([]);
     const [dadosVazaoDaMina, setDadosVazaoDaMina] = useState<DadosVazaoMina | null>(null);
     const [estatisticasVazao, setEstatisticasVazao] = useState<EstatisticasVazao | null>(null);
     const [atrasados, setAtrasados] = useState<PiezometroAtrasado[]>([]);
     const [analiseIa, setAnaliseIa] = useState<string | null>(null);
+    const [graficoData, setGraficoData] = useState<any>(null);
+    const [graficoOptions, setGraficoOptions] = useState<any>(null);
+    const [popupPiezometroZeus, setPopupPiezometroZeus] = useState<MovimentoZeus | null>(null);
+    const [popupRdLab, setPopupRdLab] = useState<MovimentoRdLab | null>(null);
 
     useEffect(() => {
         Swal.fire({
@@ -111,15 +137,60 @@ export default function GeralPage() {
             apiGeralUltimosMovimentosRdLab(),
             apiGeralUltimosMovimentosZeus(),
             apiDadosDaVazaoDaMina(),
-            apiPiozometrosAtrasados()
+            apiPiozometrosAtrasados(),
+            apiGraficoVazaoPrecipitacao()
         ])
-            .then(([resContadores, resMovimentos, resZeus, resDadosVazaoDaMina, resAtrasados]) => {
+            .then(([resContadores, resMovimentos, resZeus, resDadosVazaoDaMina, resAtrasados, resGrafico]) => {
                 setContadores(resContadores.data);
                 setMovimentos(resMovimentos.data || []);
                 setMovimentosZeus(resZeus.data || []);
                 setDadosVazaoDaMina(resDadosVazaoDaMina.data?.resultado || null);
                 setEstatisticasVazao(resDadosVazaoDaMina.data?.analisesSazonais || null);
                 setAnaliseIa(JSON.parse(resDadosVazaoDaMina.data.analiseIa.resposta_raw)[0].output || null);
+
+                // Configuração do Gráfico de Vazão e Precipitação
+                const dadosGraficoVazao = resGrafico.data || [];
+                if (dadosGraficoVazao.length > 0) {
+                    const dadosOrdenados = [...dadosGraficoVazao].sort((a: DadosGraficoVazaoPrecipitacao, b: DadosGraficoVazaoPrecipitacao) => new Date(a.mes_ano).getTime() - new Date(b.mes_ano).getTime());
+
+                    const labels = dadosOrdenados.map((h: DadosGraficoVazaoPrecipitacao) => {
+                        const [ano, mes] = h.mes_ano.split('-');
+                        return `${mes}/${ano}`;
+                    });
+
+                    const datasets = [
+                        {
+                            label: 'Vazão da Mina',
+                            data: dadosOrdenados.map((h: DadosGraficoVazaoPrecipitacao) => h.vazao_bombeamento),
+                            borderColor: '#00bb7e',
+                            backgroundColor: '#00bb7e',
+                            tension: 0.4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Precipitação',
+                            data: dadosOrdenados.map((h: DadosGraficoVazaoPrecipitacao) => h.precipitacao),
+                            borderColor: '#9e4f9eff',
+                            backgroundColor: '#9e4f9eff',
+                            tension: 0.4,
+                            yAxisID: 'y1'
+                        }
+                    ];
+
+                    setGraficoData({ labels, datasets });
+                    setGraficoOptions({
+                        maintainAspectRatio: false,
+                        aspectRatio: 0.6,
+                        plugins: {
+                            legend: { labels: { color: '#ffffff' } }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#ffffff' }, grid: { color: '#ebedef' } },
+                            y: { type: 'linear', display: true, position: 'left', ticks: { color: '#ffffff' }, grid: { color: '#ebedef' }, title: { display: true, text: 'Vazão (m³/h)', color: '#ffffff' } },
+                            y1: { type: 'linear', display: true, position: 'right', ticks: { color: '#ffffff' }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Precipitação (mm)', color: '#ffffff' } }
+                        }
+                    });
+                }
 
                 const normalizedAtrasados = (resAtrasados.data || []).map((item: PiezometroAtrasado) => {
                     if (item.frequenciaDescricao?.toUpperCase() === 'NÃO DEFINIDA') {
@@ -161,7 +232,7 @@ export default function GeralPage() {
 
         return (
             <div className="p-2">
-                <div className="surface-card shadow-2 border-round p-3 h-full">
+                <div className="surface-card shadow-2 border-round p-3 h-full transition-colors transition-duration-150 flex flex-column">
                     <div className="flex align-items-center justify-content-between mb-3">
                         <span className="text-xl font-bold text-900">{movimento.nm_piezometro}</span>
                         <div className="flex align-items-center gap-2">
@@ -170,24 +241,31 @@ export default function GeralPage() {
                         </div>
                     </div>
 
-                    <div className="flex flex-column gap-2">
-                        <div className="flex align-items-center gap-2">
-                            <i className="pi pi-user text-primary"></i>
-                            <span className="text-600">Coletor:</span>
-                            <span className="text-900 font-medium">{nomeColaborador}</span>
+                    <div className="flex align-items-center gap-3 flex-grow-1">
+                        <div className="flex flex-column gap-2 flex-1">
+                            <div className="flex align-items-center gap-2">
+                                <i className="pi pi-user text-primary"></i>
+                                <span className="text-600">Coletor:</span>
+                                <span className="text-900 font-medium">{nomeColaborador}</span>
+                            </div>
+
+                            <div className="flex align-items-center gap-2">
+                                <i className="pi pi-hashtag text-primary"></i>
+                                <span className="text-600">Registro:</span>
+                                <span className="text-900 font-medium">{movimento.n_registro}</span>
+                            </div>
                         </div>
 
-                        {/* <div className="flex align-items-center gap-2">
-                            <i className="pi pi-tag text-primary"></i>
-                            <span className="text-600">Tipo:</span>
-                            <span className="text-900 font-medium">{movimento.tp_piezometro}</span>
-                        </div> */}
-
-                        <div className="flex align-items-center gap-2">
-                            <i className="pi pi-hashtag text-primary"></i>
-                            <span className="text-600">Registro:</span>
-                            <span className="text-900 font-medium">{movimento.n_registro}</span>
-                        </div>
+                        <button
+                            type="button"
+                            className="p-button p-button-outlined p-button-sm flex-shrink-0 ml-2"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setPopupRdLab(movimento);
+                            }}
+                        >
+                            Analisar
+                        </button>
                     </div>
                 </div>
             </div>
@@ -201,7 +279,7 @@ export default function GeralPage() {
 
         return (
             <div className="p-2">
-                <div className="surface-card shadow-2 border-round p-3 h-full">
+                <div className="surface-card shadow-2 border-round p-3 h-full transition-colors transition-duration-150 flex flex-column">
                     <div className="flex align-items-center justify-content-between mb-3">
                         <span className="text-xl font-bold text-900">{movimento.nm_piezometro}</span>
                         <div className="flex align-items-center gap-2">
@@ -210,60 +288,75 @@ export default function GeralPage() {
                         </div>
                     </div>
 
-                    <div className="flex flex-column gap-2">
-                        <div className="flex align-items-center gap-2">
-                            <i className="pi pi-user text-primary"></i>
-                            <span className="text-600">Coletor:</span>
-                            <span className="text-900 font-medium">{movimento.colaborador}</span>
+                    <div className="flex align-items-center gap-3 flex-grow-1">
+                        <div className="flex flex-column gap-2 flex-1">
+                            <div className="flex align-items-center gap-2">
+                                <i className="pi pi-user text-primary"></i>
+                                <span className="text-600">Coletor:</span>
+                                <span className="text-900 font-medium">{movimento.colaborador}</span>
+                            </div>
+
+                            <div className="flex align-items-center gap-2">
+                                <i className="pi pi-tag text-primary"></i>
+                                <span className="text-600">Tipo:</span>
+                                <span className="text-900 font-medium">{movimento.tp_piezometro}</span>
+                            </div>
+
+                            {ehNivel && (
+                                <div className="flex align-items-center gap-2">
+                                    <i className="pi pi-chart-line text-blue-500"></i>
+                                    <span className="text-600">Nível Estático:</span>
+                                    <span className="text-900 font-medium">{movimento.nivel_estatico} m</span>
+                                </div>
+                            )}
+
+                            {ehVazao && (
+                                <div className="flex align-items-center gap-2">
+                                    <i className="pi pi-water text-blue-500"></i>
+                                    <span className="text-600">Vazão:</span>
+                                    <span className="text-900 font-medium">{movimento.vazao !== null ? movimento.vazao : '-'} m³/h</span>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex align-items-center gap-2">
-                            <i className="pi pi-tag text-primary"></i>
-                            <span className="text-600">Tipo:</span>
-                            <span className="text-900 font-medium">{movimento.tp_piezometro}</span>
-                        </div>
-
-                        {ehNivel && (
-                            <div className="flex align-items-center gap-2">
-                                <i className="pi pi-chart-line text-blue-500"></i>
-                                <span className="text-600">Nível Estático:</span>
-                                <span className="text-900 font-medium">{movimento.nivel_estatico} m</span>
-                            </div>
-                        )}
-
-                        {ehVazao && (
-                            <div className="flex align-items-center gap-2">
-                                <i className="pi pi-water text-blue-500"></i>
-                                <span className="text-600">Vazão:</span>
-                                <span className="text-900 font-medium">{movimento.vazao !== null ? movimento.vazao : '-'} m³/h</span>
-                            </div>
-                        )}
-
-                        {movimento.ds_observacao && (
-                            <div className="flex align-items-start gap-2 mt-2 pt-2 border-top-1 border-200">
-                                <i className="pi pi-info-circle text-orange-500 mt-1"></i>
-                                <span className="text-600 text-sm font-italic">{movimento.ds_observacao}</span>
-                            </div>
-                        )}
-
-                        {/* Alertas e Indicadores */}
-                        {movimento.dados && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {movimento.dados.maior_leitura && (
-                                    <span className="inline-flex align-items-center gap-1 px-2 py-1 border-round bg-red-100 text-red-700 text-xs font-bold">
-                                        <i className="pi pi-exclamation-circle text-red-700"></i>
-                                        Maior leitura já vista
-                                    </span>
-                                )}
-                                {movimento.dados.menor_leitura && (
-                                    <span className="inline-flex align-items-center gap-1 px-2 py-1 border-round bg-red-100 text-red-700 text-xs font-bold">
-                                        <i className="pi pi-exclamation-circle text-red-700"></i>
-                                        Menor leitura já vista
-                                    </span>
-                                )}
-                            </div>
-                        )}
+                        <button
+                            type="button"
+                            className="p-button p-button-outlined p-button-sm flex-shrink-0 ml-2"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setPopupPiezometroZeus(movimento);
+                            }}
+                        >
+                            Analisar
+                        </button>
                     </div>
+
+                    {(movimento.ds_observacao || (movimento.dados && (movimento.dados.maior_leitura || movimento.dados.menor_leitura))) && (
+                        <div className="mt-3 pt-3 border-top-1 border-200 flex flex-column gap-2">
+                            {movimento.ds_observacao && (
+                                <div className="flex align-items-start gap-2">
+                                    <i className="pi pi-info-circle text-orange-500 mt-1"></i>
+                                    <span className="text-600 text-sm font-italic">{movimento.ds_observacao}</span>
+                                </div>
+                            )}
+                            {movimento.dados && (movimento.dados.maior_leitura || movimento.dados.menor_leitura) && (
+                                <div className="flex flex-wrap gap-2">
+                                    {movimento.dados.maior_leitura && (
+                                        <span className="inline-flex align-items-center gap-1 px-2 py-1 border-round bg-red-100 text-red-700 text-xs font-bold">
+                                            <i className="pi pi-exclamation-circle text-red-700"></i>
+                                            Maior leitura já vista
+                                        </span>
+                                    )}
+                                    {movimento.dados.menor_leitura && (
+                                        <span className="inline-flex align-items-center gap-1 px-2 py-1 border-round bg-red-100 text-red-700 text-xs font-bold">
+                                            <i className="pi pi-exclamation-circle text-red-700"></i>
+                                            Menor leitura já vista
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -331,6 +424,7 @@ export default function GeralPage() {
                             <div className="text-900 font-medium text-xl">
                                 {contadores.contadoresZeus} Pontos
                             </div>
+                            <span className="text-400 text-sm">Ativos: {contadores.contadoresZeusAtivos} Inativos: {contadores.contadoresZeusInativos} </span>
                         </div>
                         <div className="flex align-items-center justify-content-center bg-blue-100 border-round" style={{ width: '2.5rem', height: '2.5rem' }}>
                             <i className="pi pi-chart-line text-blue-500 text-xl" />
@@ -345,12 +439,12 @@ export default function GeralPage() {
             <div className="col-12 md:col-6 lg:col-4">
                 <div
                     className="card mb-0 hover:surface-100 cursor-pointer transition-duration-200"
-                    onClick={() => handleNavigation('/pages/qualidade-agua')}
-                >
+                    onClick={() => handleNavigation('/pages/qualidade-agua')}>
                     <div className="flex justify-content-between mb-3">
                         <div>
                             <span className="block text-500 font-medium mb-3">Qualidade da Água</span>
                             <div className="text-900 font-medium text-xl">{contadores.contadoresRdLab} Pontos</div>
+                            <span className="text-400 text-sm">Ativos: {contadores.contadoresRdLabAtivos} Inativos: {contadores.contadoresRdLabInativos} </span>
                         </div>
                         <div className="flex align-items-center justify-content-center bg-cyan-100 border-round" style={{ width: '2.5rem', height: '2.5rem' }}>
                             <i className="pi pi-filter text-cyan-500 text-xl" />
@@ -456,6 +550,16 @@ export default function GeralPage() {
                                 </div>
                             </div>
                         </div>
+
+                        <div>
+                            <h5 className="mt-4">Gráfico de vazão da mina e precipitação</h5>
+                            {graficoData && (
+                                <div className="surface-card shadow-2 p-3 border-round">
+                                    <Chart type="line" data={graficoData} options={graficoOptions} style={{ height: '350px' }} />
+                                </div>
+                            )}
+                        </div>
+
 
                         {/* Análise Preditiva IA e Estatísticas de Tendência */}
                         <div className="grid mt-4">
@@ -633,6 +737,49 @@ export default function GeralPage() {
                     )}
                 </div>
             </div>
+
+            <Dialog
+                header={popupPiezometroZeus ? `${popupPiezometroZeus.nm_piezometro} — Histórico (10/2008 até hoje)` : ''}
+                visible={!!popupPiezometroZeus}
+                onHide={() => setPopupPiezometroZeus(null)}
+                style={{ width: '92vw', maxWidth: 'none', height: '90vh', maxHeight: '90vh' }}
+                contentStyle={{ maxHeight: 'calc(90vh - 8rem)', overflow: 'auto' }}
+                className="p-dialog-analise-zeus"
+                maximizable
+                blockScroll
+                dismissableMask
+            >
+                {popupPiezometroZeus && (
+                    <DetalhePiezometroZeusPopup
+                        movimento={{
+                            cd_piezometro: popupPiezometroZeus.cd_piezometro,
+                            nm_piezometro: popupPiezometroZeus.nm_piezometro,
+                            tp_piezometro: popupPiezometroZeus.tp_piezometro,
+                        }}
+                    />
+                )}
+            </Dialog>
+
+            <Dialog
+                header={popupRdLab ? `${popupRdLab.nm_piezometro} — Qualidade da Água (10/2008 até hoje)` : ''}
+                visible={!!popupRdLab}
+                onHide={() => setPopupRdLab(null)}
+                style={{ width: '92vw', maxWidth: 'none', height: '90vh', maxHeight: '90vh' }}
+                contentStyle={{ maxHeight: 'calc(90vh - 8rem)', overflow: 'auto' }}
+                className="p-dialog-analise-zeus"
+                maximizable
+                blockScroll
+                dismissableMask
+            >
+                {popupRdLab && (
+                    <DetalheQualidadeAguaRdLabPopup
+                        movimento={{
+                            id_zeus: popupRdLab.id_zeus,
+                            nm_piezometro: popupRdLab.nm_piezometro,
+                        }}
+                    />
+                )}
+            </Dialog>
         </div>
     );
 }

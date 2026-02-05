@@ -121,6 +121,45 @@ export const useExecucaoAnaliseQualidadeAgua = () => {
         setAnaliseOriginalIA(null);
     }, []);
 
+    /** Executa a busca para um único ponto e retorna o resultado (para uso em "todas as abas"). Não altera estado global. */
+    const executarBuscaUmPonto = useCallback(async (
+        pontoId: number,
+        dataInicio: Date,
+        dataFim: Date,
+        itensSelecionados: number[],
+        listaParametros: any[]
+    ): Promise<{ dadosColeta: any; analiseIA: string | null; analiseOriginalIA: string | null }> => {
+        const formatarMesAno = (data: Date) => {
+            const mes = (data.getMonth() + 1).toString().padStart(2, '0');
+            const ano = data.getFullYear();
+            return `${mes}/${ano}`;
+        };
+        const inicioStr = formatarMesAno(dataInicio);
+        const fimStr = formatarMesAno(dataFim);
+
+        const respostaColeta = await postColetaCompletaFiltroApi(pontoId, inicioStr, fimStr, itensSelecionados);
+        const dados = respostaColeta.data;
+
+        let analiseIA: string | null = null;
+        if (dados?.amostras) {
+            const nomesFiltros = listaParametros
+                .filter(p => itensSelecionados.includes(p.id_analise))
+                .map(p => `${p.nome} (${p.simbolo})`);
+            const respostaHistorico = await getHistoricoCompletoApi(pontoId);
+            const dadosHistorico = respostaHistorico.data;
+            const respostaIA = await webHookIAAnaliseQualidade(dados, pontoId, nomesFiltros, dadosHistorico);
+            if (Array.isArray(respostaIA) && respostaIA[0]?.output) {
+                analiseIA = respostaIA[0].output;
+            }
+        }
+
+        return {
+            dadosColeta: dados,
+            analiseIA,
+            analiseOriginalIA: analiseIA
+        };
+    }, []);
+
     return {
         estaCarregando,
         dadosColeta,
@@ -128,6 +167,7 @@ export const useExecucaoAnaliseQualidadeAgua = () => {
         analiseOriginalIA,
         setAnaliseIA,
         executarBusca,
+        executarBuscaUmPonto,
         resetarResultados
     };
 };

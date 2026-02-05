@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
 import {
-    getPiezometrosRelatorio,
+    getPiezometrosRdLab,
     getParametrosLegislacaoBuscaDadosRelacionados
 } from '@/service/qualidadeAguaApis';
 
@@ -26,13 +26,20 @@ export const useFiltrosEParametrosQualidadeAgua = ({
     mesAnoFimInicial
 }: PropriedadesIniciais) => {
     const [tipoFiltroSelecionado, setTipoFiltroSelecionado] = useState<string | null>(null);
-    const [pontoSelecionado, setPontoSelecionado] = useState<number | null>(null);
+    const [situacao, setSituacao] = useState<string | null>('A');
+    const [pontosSelecionados, setPontosSelecionados] = useState<number[]>([]);
     const [dataInicio, setDataInicio] = useState<Date | null>(null);
     const [dataFim, setDataFim] = useState<Date | null>(null);
     const [pontos, setPontos] = useState<any[]>([]);
     const [itensSelecionados, setItensSelecionados] = useState<number[]>([]);
     const [parametros, setParametros] = useState<any[]>([]);
     const [estaCarregandoOpcoes, setEstaCarregandoOpcoes] = useState(false);
+
+    const opcoesFiltroSituacao = [
+        { label: "Ativo", value: "A" },
+        { label: "Inativo", value: "I" },
+        { label: "Todos", value: null },
+    ];
 
     // Converte string mm/yyyy para Date
     const converterMesAnoParaData = (mesAno?: string | null): Date | null => {
@@ -48,13 +55,15 @@ export const useFiltrosEParametrosQualidadeAgua = ({
         const buscarPontos = async () => {
             setEstaCarregandoOpcoes(true);
             try {
-                const resposta = await getPiezometrosRelatorio(tipoFiltroSelecionado);
+                const resposta = await getPiezometrosRdLab(situacao, tipoFiltroSelecionado);
                 const formatados = resposta.data.map((item: any) => ({
                     label: item.nm_piezometro,
                     value: item.id_zeus
                 }));
                 setPontos(formatados);
-                setPontoSelecionado(null);
+                
+                // Remove da seleção os pontos que não estão mais na lista
+                setPontosSelecionados(prev => prev.filter(id => formatados.some((p: any) => p.value === id)));
             } catch (erro) {
                 console.error("Erro ao buscar pontos de monitoramento:", erro);
                 setPontos([]);
@@ -63,7 +72,8 @@ export const useFiltrosEParametrosQualidadeAgua = ({
             }
         };
         buscarPontos();
-    }, [tipoFiltroSelecionado]);
+    }, [tipoFiltroSelecionado, situacao]);
+    const pontoSelecionado = pontosSelecionados.length > 0 ? pontosSelecionados[0] : null;
 
     // Carrega parâmetros da legislação ao montar o componente
     useEffect(() => {
@@ -86,18 +96,26 @@ export const useFiltrosEParametrosQualidadeAgua = ({
 
     // Aplica valores iniciais vindos das props de navegação
     useEffect(() => {
-        if (idPiezometroInicial) setPontoSelecionado(idPiezometroInicial);
+        if (idPiezometroInicial) setPontosSelecionados(prev => prev.includes(idPiezometroInicial) ? prev : [idPiezometroInicial]);
         const dataInic = converterMesAnoParaData(mesAnoInicioInicial);
         const dataFinal = converterMesAnoParaData(mesAnoFimInicial);
         if (dataInic) setDataInicio(dataInic);
         if (dataFinal) setDataFim(dataFinal);
     }, [idPiezometroInicial, mesAnoInicioInicial, mesAnoFimInicial]);
 
+    const aoMudarPontos = (ids: number[] | null) => {
+        setPontosSelecionados(ids && ids.length > 0 ? ids : []);
+    };
+
     return {
         tipoFiltroSelecionado,
         setTipoFiltroSelecionado,
+        situacao,
+        setSituacao,
+        opcoesFiltroSituacao,
         pontoSelecionado,
-        setPontoSelecionado,
+        pontosSelecionados,
+        aoMudarPontos,
         dataInicio,
         setDataInicio,
         dataFim,

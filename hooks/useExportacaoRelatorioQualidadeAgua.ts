@@ -19,6 +19,13 @@ interface PontoMonitoramento {
     value: number;
 }
 
+/** Conteúdo de uma aba para exportação em lote (PDF/Word todas as abas). */
+export interface ConteudoAbaExportacaoQualidade {
+    nomePonto: string;
+    textoAnalise: string;
+    imagensBase64: string[];
+}
+
 /**
  * Hook para gerenciar a exportação do relatório de Qualidade da Água para PDF e Word.
  * 
@@ -424,8 +431,233 @@ export const useExportacaoRelatorioQualidadeAgua = (
         }
     };
 
+    /** Captura texto da análise e imagens dos gráficos do DOM atual (para uso ao alternar abas). */
+    const capturarConteudoAtual = async (): Promise<{ textoAnalise: string; imagensBase64: string[] }> => {
+        const elementoAnaliseIA = document.getElementById("textoApareceNoPdf");
+        const containerGraficos =
+            (document.getElementById("analises-export") as HTMLElement | null) ||
+            (document.getElementById("analises-scrap") as HTMLElement | null);
+
+        const textoAnalise = (elementoAnaliseIA as HTMLElement)?.innerText ?? '';
+        const imagensBase64: string[] = [];
+
+        if (containerGraficos) {
+            const containersIndividuais = obterContainersGraficos(containerGraficos);
+            for (const container of containersIndividuais) {
+                await aguardarProximoFrame();
+                const imgData = await capturarContainerCompletoComoImagem(container);
+                if (imgData && imgData.length >= 100) imagensBase64.push(imgData);
+            }
+        }
+
+        return { textoAnalise, imagensBase64 };
+    };
+
+    /** Gera um único PDF com todas as abas (cada aba = seção com análise e gráficos). */
+    const gerarPDFTodasAbas = async (conteudos: ConteudoAbaExportacaoQualidade[]) => {
+        if (!conteudos?.length) {
+            Swal.fire({ icon: 'warning', title: 'Nada para exportar', text: 'Não há conteúdo das abas.' });
+            return;
+        }
+        try {
+            const base64Logo = await convertImageToBase64('/assets/logo-melhor.jpg');
+            const { jsPDF } = await import('jspdf');
+            const pdf = new jsPDF({ unit: 'in', format: 'letter', orientation: 'landscape' });
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margemX = 0.5;
+            const topoConteudoY = 1.0;
+            const maxYTexto = pageHeight - 0.8;
+            const alturaLinha = 0.18;
+
+            const desenharHeaderFooter = () => {
+                if (base64Logo) {
+                    pdf.addImage(base64Logo, 'JPEG', margemX, 0.1, 2.0, 0.56);
+                }
+                pdf.setFontSize(8);
+                pdf.setTextColor(51, 51, 51);
+                const footerText1 = "Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil";
+                const footerText2 = "+55 48 3431 9444   www.riodeserto.com.br";
+                pdf.text(footerText1, (pageWidth - pdf.getStringUnitWidth(footerText1) * 8 / 72) / 2, pageHeight - 0.4);
+                pdf.text(footerText2, (pageWidth - pdf.getStringUnitWidth(footerText2) * 8 / 72) / 2, pageHeight - 0.25);
+            };
+
+            for (let idx = 0; idx < conteudos.length; idx++) {
+                const c = conteudos[idx];
+                if (idx > 0) pdf.addPage();
+
+                desenharHeaderFooter();
+                pdf.setTextColor(0, 0, 0);
+                pdf.setFontSize(14);
+                pdf.text(`${c.nomePonto}:`, margemX, topoConteudoY);
+
+                const linhas = (c.textoAnalise || '').split('\n');
+                pdf.setFontSize(10);
+                let y = topoConteudoY + 0.35;
+                for (const linha of linhas) {
+                    const texto = linha?.length ? linha : ' ';
+                    const partes = pdf.splitTextToSize(texto, pageWidth - margemX * 2);
+                    for (const parte of partes) {
+                        if (y > maxYTexto) {
+                            pdf.addPage();
+                            desenharHeaderFooter();
+                            pdf.setFontSize(10);
+                            y = topoConteudoY;
+                        }
+                        pdf.text(parte, margemX, y);
+                        y += alturaLinha;
+                    }
+                }
+
+                const larguraDisponivel = pageWidth - margemX * 2;
+                const alturaTotalDisponivel = pageHeight - topoConteudoY - 0.9;
+                const espacoEntreGraficos = 0.2;
+                const alturaPorGrafico = (alturaTotalDisponivel - espacoEntreGraficos) / 2;
+
+                for (let i = 0; i < c.imagensBase64.length; i += 2) {
+                    pdf.addPage();
+                    desenharHeaderFooter();
+
+                    const img1Data = c.imagensBase64[i];
+                    const img = new Image();
+                    img.src = img1Data;
+                    await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
+                    const proporcao1 = img.width / img.height;
+                    let w1 = larguraDisponivel;
+                    let h1 = alturaPorGrafico;
+                    if (proporcao1 > larguraDisponivel / alturaPorGrafico) {
+                        h1 = larguraDisponivel / proporcao1;
+                    } else {
+                        w1 = alturaPorGrafico * proporcao1;
+                    }
+                    pdf.addImage(img1Data, 'JPEG', margemX, topoConteudoY, w1, h1, undefined, 'FAST');
+
+                    if (i + 1 < c.imagensBase64.length) {
+                        const img2Data = c.imagensBase64[i + 1];
+                        const img2 = new Image();
+                        img2.src = img2Data;
+                        await new Promise((resolve) => { img2.onload = resolve; img2.onerror = resolve; });
+                        const proporcao2 = img2.width / img2.height;
+                        let w2 = larguraDisponivel;
+                        let h2 = alturaPorGrafico;
+                        if (proporcao2 > larguraDisponivel / alturaPorGrafico) {
+                            h2 = larguraDisponivel / proporcao2;
+                        } else {
+                            w2 = alturaPorGrafico * proporcao2;
+                        }
+                        pdf.addImage(img2Data, 'JPEG', margemX, topoConteudoY + h1 + espacoEntreGraficos, w2, h2, undefined, 'FAST');
+                    }
+                }
+            }
+
+            pdf.save('relatorio-qualidade-todas-abas.pdf');
+        } catch (erro) {
+            console.error('Erro ao gerar PDF todas as abas:', erro);
+            Swal.fire({ icon: 'error', title: 'Erro ao gerar PDF', text: 'Ocorreu um problema ao exportar.' });
+        }
+    };
+
+    /** Gera um único Word com todas as abas (cada aba = seção com análise e gráficos). */
+    const gerarWordTodasAbas = async (conteudos: ConteudoAbaExportacaoQualidade[]) => {
+        if (!conteudos?.length) {
+            Swal.fire({ icon: 'warning', title: 'Nada para exportar', text: 'Não há conteúdo das abas.' });
+            return;
+        }
+        try {
+            const base64Logo = await convertImageToBase64('/assets/logo-melhor.jpg');
+            let headerChildren: any[] = [];
+            if (base64Logo) {
+                const logoResponse = await fetch(base64Logo);
+                const logoBuffer = await logoResponse.arrayBuffer();
+                headerChildren.push(
+                    new Paragraph({
+                        children: [
+                            new ImageRun({
+                                data: new Uint8Array(logoBuffer),
+                                type: "jpg",
+                                transformation: { width: 200, height: 56 }
+                            })
+                        ],
+                        alignment: AlignmentType.LEFT
+                    })
+                );
+            }
+
+            const children: any[] = [];
+            for (const c of conteudos) {
+                children.push(
+                    new Paragraph({
+                        children: [new TextRun({ text: `${c.nomePonto}:`, bold: true, size: 28, font: "Arial" })],
+                        spacing: { after: 200 }
+                    })
+                );
+                (c.textoAnalise || '').split('\n').forEach(linha =>
+                    children.push(
+                        new Paragraph({
+                            children: [new TextRun({ text: linha || ' ', size: 20, font: "Arial" })],
+                            spacing: { after: 120 }
+                        })
+                    )
+                );
+                for (const imgData of c.imagensBase64) {
+                    const response = await fetch(imgData);
+                    const arrayBuffer = await response.arrayBuffer();
+                    children.push(
+                        new Paragraph({
+                            children: [
+                                new ImageRun({
+                                    data: new Uint8Array(arrayBuffer),
+                                    type: "jpg",
+                                    transformation: { width: 900, height: 300 }
+                                })
+                            ],
+                            alignment: AlignmentType.CENTER,
+                            spacing: { before: 200, after: 200 }
+                        })
+                    );
+                }
+            }
+
+            const doc = new Document({
+                sections: [{
+                    properties: {
+                        page: {
+                            size: { orientation: PageOrientation.LANDSCAPE },
+                            margin: { top: 720, right: 720, bottom: 720, left: 720 }
+                        }
+                    },
+                    headers: { default: new Header({ children: headerChildren }) },
+                    footers: {
+                        default: new Footer({
+                            children: [
+                                new Paragraph({
+                                    alignment: AlignmentType.CENTER,
+                                    children: [new TextRun({ text: "Avenida Getúlio Vargas, 515 - 88801 500 - Criciúma - SC - Brasil", size: 16, color: "333333", font: "Arial" })]
+                                }),
+                                new Paragraph({
+                                    alignment: AlignmentType.CENTER,
+                                    children: [new TextRun({ text: "+55 48 3431 9444   www.riodeserto.com.br", size: 16, color: "333333", font: "Arial", bold: true })]
+                                })
+                            ]
+                        })
+                    },
+                    children
+                }]
+            });
+
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, 'relatorio-qualidade-todas-abas.docx');
+        } catch (erro) {
+            console.error('Erro ao gerar Word todas as abas:', erro);
+            Swal.fire({ icon: 'error', title: 'Erro ao gerar Word', text: 'Ocorreu um problema ao exportar.' });
+        }
+    };
+
     return {
         gerarPDF,
-        gerarWord
+        gerarWord,
+        capturarConteudoAtual,
+        gerarPDFTodasAbas,
+        gerarWordTodasAbas
     };
 };
