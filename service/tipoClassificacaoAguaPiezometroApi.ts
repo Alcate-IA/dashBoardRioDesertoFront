@@ -91,3 +91,52 @@ export const atualizarClassificacaoAguaPorPiezometro = (
 export const excluirClassificacaoAguaPorPiezometro = (id: number) => {
     return rota.delete(`/api/classificacao-agua-por-piezometro/${id}`);
 };
+
+/**
+ * Lista todas as legislações disponíveis.
+ * @returns Promise com a lista de legislações
+ */
+export const listarLegislacoes = () => {
+    return rota.get("/api/legislacoes");
+};
+
+/**
+ * Associa um tipo de classificação de água a uma legislação.
+ * @param dados idLegislacao e idClassificacaoTipoAgua
+ * @returns Promise da criação
+ */
+export const criarClassificacaoLegislacao = (dados: {
+    idLegislacao: number;
+    idClassificacaoTipoAgua: number;
+}) => {
+    return rota.post("/api/classificacao-legislacao", dados);
+};
+
+/**
+ * Lista legislações associadas a um tipo de classificação.
+ * @param idClassificacao ID do tipo de classificação
+ * @returns Promise com lista de { idClassificacaoLegislacao, idLegislacao, nomeLegislacao }
+ */
+export const listarLegislacoesPelaClassificacao = (idClassificacao: number) => {
+    return rota.get(`/api/classificacao-legislacao/legislacoes-pela-classificacao/${idClassificacao}`);
+};
+
+/**
+ * Atualiza uma associação classificação-legislação.
+ * @param id idClassificacaoLegislacao
+ * @param dados idLegislacao e idClassificacaoTipoAgua
+ */
+export const atualizarClassificacaoLegislacao = (
+    id: number,
+    dados: { idLegislacao: number; idClassificacaoTipoAgua: number }
+) => {
+    return rota.put(`/api/classificacao-legislacao/${id}`, dados);
+};
+
+/**
+ * Remove associação classificação-legislação.
+ * @param id idClassificacaoLegislacao
+ */
+export const excluirClassificacaoLegislacao = (id: number) => {
+    return rota.delete(`/api/classificacao-legislacao/${id}`);
+};

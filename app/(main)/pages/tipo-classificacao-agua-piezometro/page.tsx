@@ -19,7 +19,12 @@ import {
     buscarPiezometrosTipoAgua,
     criarClassificacaoAguaPorPiezometro,
     atualizarClassificacaoAguaPorPiezometro,
-    excluirClassificacaoAguaPorPiezometro
+    excluirClassificacaoAguaPorPiezometro,
+    listarLegislacoes,
+    criarClassificacaoLegislacao,
+    listarLegislacoesPelaClassificacao,
+    atualizarClassificacaoLegislacao,
+    excluirClassificacaoLegislacao
 } from "@/service/tipoClassificacaoAguaPiezometroApi";
 
 type ModoVisualizacao = "tipos" | "piezometros";
@@ -29,6 +34,19 @@ type FiltroPiezometros = "classificados" | "naoClassificados" | "todos";
 interface TipoClassificacaoApi {
     idClassificacao: number;
     nomeClassificacao: string;
+}
+
+/** Legislação retornada por /api/legislacoes */
+interface Legislacao {
+    idLegislacao: number;
+    nomeLegislacao: string;
+}
+
+/** Item retornado por /api/classificacao-legislacao/legislacoes-pela-classificacao/{id} */
+interface ClassificacaoLegislacaoItem {
+    idClassificacaoLegislacao: number;
+    idLegislacao: number;
+    nomeLegislacao: string;
 }
 
 interface TipoClassificacao {
@@ -101,6 +119,23 @@ export default function TipoClassificacaoAguaPiezometroPage() {
         id: 0,
         nome: ""
     });
+
+    const [legislacoes, setLegislacoes] = useState<Legislacao[]>([]);
+    /** IDs de legislações selecionadas no modal de novo tipo (apenas ao criar) */
+    const [legislacoesSelecionadasNovo, setLegislacoesSelecionadasNovo] = useState<number[]>([]);
+    /** Valor do dropdown "Adicionar legislação" (limpo após adicionar) */
+    const [legislacaoDropdownValor, setLegislacaoDropdownValor] = useState<number | null>(null);
+
+    /** Legislações já associadas ao tipo em edição (modal editar) */
+    const [legislacoesDaClassificacaoEdicao, setLegislacoesDaClassificacaoEdicao] = useState<ClassificacaoLegislacaoItem[]>([]);
+    /** ID da classificação-legislação em modo edição (input desbloqueado + botão confirmar) */
+    const [editandoLegislacaoId, setEditandoLegislacaoId] = useState<number | null>(null);
+    /** Valor selecionado no dropdown ao editar uma legislação */
+    const [legislacaoEdicaoValor, setLegislacaoEdicaoValor] = useState<number | null>(null);
+    /** Dropdown "Adicionar legislação" no modal de editar */
+    const [legislacaoDropdownValorEdicao, setLegislacaoDropdownValorEdicao] = useState<number | null>(null);
+    /** Nome original ao abrir o editar (para exibir botão Confirmar só quando mudar) */
+    const [nomeOriginalEdicao, setNomeOriginalEdicao] = useState("");
 
     const [formularioClassificar, setFormularioClassificar] = useState<{
         piezometroId: number;
@@ -251,20 +286,66 @@ export default function TipoClassificacaoAguaPiezometroPage() {
         return [...linhasClass, ...linhasNao];
     }, [dadosPiezometros, filtroPiezometros]);
 
+    const carregarLegislacoes = async () => {
+        try {
+            const res = await listarLegislacoes();
+            const lista = extrairArray(res) as Legislacao[];
+            setLegislacoes(Array.isArray(lista) ? lista : []);
+        } catch (erro) {
+            console.error("Erro ao carregar legislações:", erro);
+            toast.current?.show({
+                severity: "error",
+                summary: "Erro",
+                detail: "Falha ao carregar legislações.",
+                life: 3000
+            });
+        }
+    };
+
     const abrirNovo = () => {
         setFormulario({ id: 0, nome: "" });
+        setLegislacoesSelecionadasNovo([]);
+        setLegislacaoDropdownValor(null);
         setEditando(false);
         setExibirDialogo(true);
+        if (legislacoes.length === 0) carregarLegislacoes();
     };
 
     const fecharDialogo = () => {
         setExibirDialogo(false);
+        setEditandoLegislacaoId(null);
+        setLegislacoesDaClassificacaoEdicao([]);
+        setLegislacaoDropdownValorEdicao(null);
+        setNomeOriginalEdicao("");
     };
 
-    const handleEditar = (tipo: TipoClassificacao) => {
+    const carregarLegislacoesPelaClassificacao = async (idClassificacao: number) => {
+        try {
+            const res = await listarLegislacoesPelaClassificacao(idClassificacao);
+            const lista = extrairArray(res) as ClassificacaoLegislacaoItem[];
+            setLegislacoesDaClassificacaoEdicao(Array.isArray(lista) ? lista : []);
+        } catch (erro) {
+            console.error("Erro ao carregar legislações da classificação:", erro);
+            toast.current?.show({
+                severity: "error",
+                summary: "Erro",
+                detail: "Falha ao carregar legislações associadas.",
+                life: 3000
+            });
+            setLegislacoesDaClassificacaoEdicao([]);
+        }
+    };
+
+    const handleEditar = async (tipo: TipoClassificacao) => {
         setFormulario({ id: tipo.id, nome: tipo.nome });
+        setNomeOriginalEdicao(tipo.nome);
         setEditando(true);
+        setEditandoLegislacaoId(null);
+        setLegislacaoEdicaoValor(null);
+        setLegislacaoDropdownValorEdicao(null);
         setExibirDialogo(true);
+        if (legislacoes.length === 0) await carregarLegislacoes();
+        await carregarLegislacoesPelaClassificacao(tipo.id);
     };
 
     const handleExcluir = (tipo: TipoClassificacao) => {
@@ -309,26 +390,33 @@ export default function TipoClassificacaoAguaPiezometroPage() {
         }
 
         try {
-            const dados = { nomeClassificacao: nomeTrim };
-
-            if (editando) {
-                await atualizarTipoClassificacao(formulario.id, dados);
+            // Criar: primeiro POST do tipo, depois associações com legislações
+            const res = await criarTipoClassificacao({ nomeClassificacao: nomeTrim });
+            const criado = res?.data as { idClassificacao?: number } | undefined;
+            const idNovo = criado?.idClassificacao;
+            if (idNovo == null) {
                 toast.current?.show({
-                    severity: "success",
-                    summary: "Sucesso",
-                    detail: "Tipo de classificação atualizado com sucesso.",
-                    life: 3000
+                    severity: "error",
+                    summary: "Erro",
+                    detail: "Resposta da API sem ID do tipo criado.",
+                    life: 5000
                 });
-            } else {
-                await criarTipoClassificacao(dados);
-                toast.current?.show({
-                    severity: "success",
-                    summary: "Sucesso",
-                    detail: "Tipo de classificação criado com sucesso.",
-                    life: 3000
+                return;
+            }
+
+            for (const idLegislacao of legislacoesSelecionadasNovo) {
+                await criarClassificacaoLegislacao({
+                    idLegislacao,
+                    idClassificacaoTipoAgua: idNovo
                 });
             }
 
+            toast.current?.show({
+                severity: "success",
+                summary: "Sucesso",
+                detail: "Tipo de classificação criado com sucesso.",
+                life: 3000
+            });
             fecharDialogo();
             carregarTipos();
         } catch (erro: unknown) {
@@ -346,6 +434,176 @@ export default function TipoClassificacaoAguaPiezometroPage() {
                 summary: "Erro",
                 detail: mensagem,
                 life: 6000
+            });
+        }
+    };
+
+    const adicionarLegislacao = (idLegislacao: number | null) => {
+        if (idLegislacao && !legislacoesSelecionadasNovo.includes(idLegislacao)) {
+            setLegislacoesSelecionadasNovo([...legislacoesSelecionadasNovo, idLegislacao]);
+            setLegislacaoDropdownValor(null);
+        }
+    };
+
+    const removerLegislacao = (idLegislacao: number) => {
+        setLegislacoesSelecionadasNovo(legislacoesSelecionadasNovo.filter((id) => id !== idLegislacao));
+    };
+
+    const confirmarAlteracaoNome = async () => {
+        const nomeTrim = formulario.nome?.trim();
+        if (!nomeTrim) {
+            toast.current?.show({
+                severity: "warn",
+                summary: "Atenção",
+                detail: "Informe o nome do tipo de classificação.",
+                life: 3000
+            });
+            return;
+        }
+        try {
+            await atualizarTipoClassificacao(formulario.id, { nomeClassificacao: nomeTrim });
+            setNomeOriginalEdicao(nomeTrim);
+            toast.current?.show({
+                severity: "success",
+                summary: "Sucesso",
+                detail: "Nome atualizado com sucesso.",
+                life: 3000
+            });
+            carregarTipos();
+        } catch (erro: unknown) {
+            console.error("Erro ao atualizar nome:", erro);
+            const mensagem =
+                axios.isAxiosError(erro) &&
+                typeof erro.response?.data === "object" &&
+                erro.response?.data !== null &&
+                "message" in erro.response.data &&
+                typeof (erro.response.data as { message: string }).message === "string"
+                    ? (erro.response.data as { message: string }).message
+                    : "Falha ao atualizar o nome.";
+            toast.current?.show({
+                severity: "error",
+                summary: "Erro",
+                detail: mensagem,
+                life: 6000
+            });
+        }
+    };
+
+    const entrarEdicaoLegislacao = (item: ClassificacaoLegislacaoItem) => {
+        setEditandoLegislacaoId(item.idClassificacaoLegislacao);
+        setLegislacaoEdicaoValor(item.idLegislacao);
+    };
+
+    const cancelarEdicaoLegislacao = () => {
+        setEditandoLegislacaoId(null);
+        setLegislacaoEdicaoValor(null);
+    };
+
+    const confirmarEdicaoLegislacao = async () => {
+        if (editandoLegislacaoId == null || legislacaoEdicaoValor == null || formulario.id === 0) return;
+        try {
+            await atualizarClassificacaoLegislacao(editandoLegislacaoId, {
+                idLegislacao: legislacaoEdicaoValor,
+                idClassificacaoTipoAgua: formulario.id
+            });
+            toast.current?.show({
+                severity: "success",
+                summary: "Sucesso",
+                detail: "Legislação atualizada.",
+                life: 3000
+            });
+            cancelarEdicaoLegislacao();
+            await carregarLegislacoesPelaClassificacao(formulario.id);
+        } catch (erro) {
+            console.error("Erro ao atualizar legislação:", erro);
+            toast.current?.show({
+                severity: "error",
+                summary: "Erro",
+                detail: "Falha ao atualizar legislação.",
+                life: 3000
+            });
+        }
+    };
+
+    const excluirLegislacaoEdicao = (item: ClassificacaoLegislacaoItem) => {
+        Swal.fire({
+            title: "Tem certeza?",
+            text: `Deseja desassociar a legislação "${item.nomeLegislacao}" deste tipo?`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Sim, excluir!",
+            cancelButtonText: "Cancelar",
+            didOpen: (modal) => {
+                const container = modal?.parentElement;
+                if (container) (container as HTMLElement).style.zIndex = "10000";
+            }
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    await excluirClassificacaoLegislacao(item.idClassificacaoLegislacao);
+                    toast.current?.show({
+                        severity: "success",
+                        summary: "Sucesso",
+                        detail: "Legislação desassociada.",
+                        life: 3000
+                    });
+                    await carregarLegislacoesPelaClassificacao(formulario.id);
+                    if (editandoLegislacaoId === item.idClassificacaoLegislacao) cancelarEdicaoLegislacao();
+                } catch (erro) {
+                    console.error("Erro ao excluir:", erro);
+                    toast.current?.show({
+                        severity: "error",
+                        summary: "Erro",
+                        detail: "Falha ao desassociar legislação.",
+                        life: 3000
+                    });
+                }
+            }
+        });
+    };
+
+    const confirmarAdicionarLegislacaoEdicao = async () => {
+        const idLeg = legislacaoDropdownValorEdicao;
+        if (idLeg == null || formulario.id === 0) {
+            toast.current?.show({
+                severity: "warn",
+                summary: "Atenção",
+                detail: "Selecione uma legislação.",
+                life: 3000
+            });
+            return;
+        }
+        if (legislacoesDaClassificacaoEdicao.some((l) => l.idLegislacao === idLeg)) {
+            toast.current?.show({
+                severity: "warn",
+                summary: "Atenção",
+                detail: "Esta legislação já está associada.",
+                life: 3000
+            });
+            return;
+        }
+        try {
+            await criarClassificacaoLegislacao({
+                idLegislacao: idLeg,
+                idClassificacaoTipoAgua: formulario.id
+            });
+            toast.current?.show({
+                severity: "success",
+                summary: "Sucesso",
+                detail: "Legislação associada.",
+                life: 3000
+            });
+            setLegislacaoDropdownValorEdicao(null);
+            await carregarLegislacoesPelaClassificacao(formulario.id);
+        } catch (erro) {
+            console.error("Erro ao associar legislação:", erro);
+            toast.current?.show({
+                severity: "error",
+                summary: "Erro",
+                detail: "Falha ao associar legislação.",
+                life: 3000
             });
         }
     };
@@ -549,8 +807,14 @@ export default function TipoClassificacaoAguaPiezometroPage() {
 
     const rodapeDialogo = (
         <div className="flex justify-content-end gap-2">
-            <Button label="Cancelar" icon="pi pi-times" text onClick={fecharDialogo} className="p-button-secondary" />
-            <Button label={editando ? "Atualizar" : "Criar"} icon="pi pi-check" onClick={handleSalvar} severity="success" />
+            {editando ? (
+                <Button label="Fechar" icon="pi pi-times" onClick={fecharDialogo} className="p-button-secondary" />
+            ) : (
+                <>
+                    <Button label="Cancelar" icon="pi pi-times" text onClick={fecharDialogo} className="p-button-secondary" />
+                    <Button label="Criar" icon="pi pi-check" onClick={handleSalvar} severity="success" />
+                </>
+            )}
         </div>
     );
 
@@ -755,14 +1019,162 @@ export default function TipoClassificacaoAguaPiezometroPage() {
                             <label htmlFor="nome" className="font-bold">
                                 Nome
                             </label>
-                            <InputText
-                                id="nome"
-                                value={formulario.nome}
-                                onChange={(e) => setFormulario({ ...formulario, nome: e.target.value })}
-                                placeholder="Nome do tipo de classificação"
-                                className={classNames({ "p-invalid": !formulario.nome?.trim() })}
-                            />
+                            <div className="flex align-items-center gap-2 flex-wrap">
+                                <InputText
+                                    id="nome"
+                                    value={formulario.nome}
+                                    onChange={(e) => setFormulario({ ...formulario, nome: e.target.value })}
+                                    placeholder="Nome do tipo de classificação"
+                                    className={classNames("flex-1 min-w-0", { "p-invalid": !formulario.nome?.trim() })}
+                                />
+                                {editando &&
+                                    formulario.nome?.trim() !== nomeOriginalEdicao &&
+                                    formulario.nome?.trim() !== "" && (
+                                        <Button
+                                            type="button"
+                                            label="Confirmar"
+                                            icon="pi pi-check"
+                                            onClick={confirmarAlteracaoNome}
+                                            severity="success"
+                                        />
+                                    )}
+                            </div>
                         </div>
+                        {!editando && (
+                            <div className="field mt-3">
+                                <label className="font-bold">Legislações</label>
+                                <p className="text-color-secondary text-sm mt-0 mb-2">
+                                    Opcional: associe este tipo de água a uma ou mais legislações.
+                                </p>
+                                <Dropdown
+                                    value={legislacaoDropdownValor}
+                                    options={legislacoes.filter((l) => !legislacoesSelecionadasNovo.includes(l.idLegislacao))}
+                                    onChange={(e) => adicionarLegislacao(e.value ?? null)}
+                                    optionLabel="nomeLegislacao"
+                                    optionValue="idLegislacao"
+                                    placeholder="Adicionar legislação"
+                                    filter
+                                    className="w-full"
+                                />
+                                {legislacoesSelecionadasNovo.length > 0 && (
+                                    <ul className="list-none pl-0 mt-2 flex flex-column gap-1">
+                                        {legislacoesSelecionadasNovo.map((id) => {
+                                            const leg = legislacoes.find((l) => l.idLegislacao === id);
+                                            return (
+                                                <li
+                                                    key={id}
+                                                    className="flex align-items-center justify-content-between p-2 surface-100 border-round"
+                                                >
+                                                    <span>{leg?.nomeLegislacao ?? `ID ${id}`}</span>
+                                                    <Button
+                                                        type="button"
+                                                        icon="pi pi-times"
+                                                        rounded
+                                                        text
+                                                        severity="secondary"
+                                                        onClick={() => removerLegislacao(id)}
+                                                        tooltip="Remover"
+                                                    />
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                )}
+                            </div>
+                        )}
+                        {editando && (
+                            <div className="field mt-3">
+                                <label className="font-bold">Legislações associadas</label>
+                                <p className="text-color-secondary text-sm mt-0 mb-2">
+                                    Edite, exclua ou adicione legislações a este tipo.
+                                </p>
+                                {legislacoesDaClassificacaoEdicao.length > 0 && (
+                                    <ul className="list-none pl-0 mt-2 flex flex-column gap-2">
+                                        {legislacoesDaClassificacaoEdicao.map((item) => (
+                                            <li
+                                                key={item.idClassificacaoLegislacao}
+                                                className="flex align-items-center gap-2 p-2 surface-100 border-round flex-wrap"
+                                            >
+                                                {editandoLegislacaoId === item.idClassificacaoLegislacao ? (
+                                                    <>
+                                                        <Dropdown
+                                                            value={legislacaoEdicaoValor}
+                                                            options={legislacoes}
+                                                            onChange={(e) => setLegislacaoEdicaoValor(e.value ?? null)}
+                                                            optionLabel="nomeLegislacao"
+                                                            optionValue="idLegislacao"
+                                                            placeholder="Selecione a legislação"
+                                                            filter
+                                                            className="flex-1 min-w-0"
+                                                            style={{ minWidth: "12rem" }}
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            icon="pi pi-check"
+                                                            rounded
+                                                            severity="success"
+                                                            onClick={confirmarEdicaoLegislacao}
+                                                            tooltip="Confirmar"
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            icon="pi pi-times"
+                                                            rounded
+                                                            text
+                                                            severity="secondary"
+                                                            onClick={cancelarEdicaoLegislacao}
+                                                            tooltip="Cancelar"
+                                                        />
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="flex-1 min-w-0">{item.nomeLegislacao}</span>
+                                                        <Button
+                                                            type="button"
+                                                            icon="pi pi-pencil"
+                                                            rounded
+                                                            severity="info"
+                                                            onClick={() => entrarEdicaoLegislacao(item)}
+                                                            tooltip="Editar"
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            icon="pi pi-trash"
+                                                            rounded
+                                                            severity="danger"
+                                                            onClick={() => excluirLegislacaoEdicao(item)}
+                                                            tooltip="Excluir"
+                                                        />
+                                                    </>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                                <div className="flex align-items-center gap-2 mt-2 flex-wrap">
+                                    <Dropdown
+                                        value={legislacaoDropdownValorEdicao}
+                                        options={legislacoes.filter(
+                                            (l) => !legislacoesDaClassificacaoEdicao.some((a) => a.idLegislacao === l.idLegislacao)
+                                        )}
+                                        onChange={(e) => setLegislacaoDropdownValorEdicao(e.value ?? null)}
+                                        optionLabel="nomeLegislacao"
+                                        optionValue="idLegislacao"
+                                        placeholder="Adicionar legislação"
+                                        filter
+                                        className="flex-1 min-w-0"
+                                        style={{ minWidth: "12rem" }}
+                                    />
+                                    <Button
+                                        type="button"
+                                        label="Confirmar"
+                                        icon="pi pi-plus"
+                                        onClick={confirmarAdicionarLegislacaoEdicao}
+                                        severity="success"
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </Dialog>
             </div>
         </div>
