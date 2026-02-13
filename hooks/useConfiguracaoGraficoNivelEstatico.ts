@@ -75,7 +75,7 @@ export const useConfiguracaoGraficoNivelEstatico = (
                     order: 2
                 },
                 {
-                    label: "Vazão Mina",
+                    label: "Vazão Bombeada Mina",
                     data: dados.map((i: any) => i.vazao_bombeamento),
                     borderColor: '#00bb7e',
                     borderWidth: 1,
@@ -102,7 +102,7 @@ export const useConfiguracaoGraficoNivelEstatico = (
         } else if (tipoPiezometro === 'PR') {
             datasets = [
                 {
-                    label: "Vazão Mina",
+                    label: "Vazão Bombeada Mina",
                     data: dados.map((i: any) => i.vazao_bombeamento),
                     borderColor: '#00bb7e',
                     tension: 0.4,
@@ -147,7 +147,7 @@ export const useConfiguracaoGraficoNivelEstatico = (
                     yAxisID: 'y'
                 },
                 {
-                    label: "Vazão Mina",
+                    label: "Vazão Bombeada Mina",
                     data: vazaoBombeamentoData,
                     borderColor: '#00bb7e',
                     borderWidth: 1,
@@ -211,7 +211,7 @@ export const useConfiguracaoGraficoNivelEstatico = (
                     grid: { drawOnChartArea: false },
                     title: {
                         display: true,
-                        text: ehPCouPV ? 'Vazão Mina (m³/h) / Precipitação (mm)' : 'Precipitação (mm) / Vazão Mina (m³/h)',
+                        text: ehPCouPV ? 'Vazão Bombeada Mina (m³/h) / Precipitação (mm)' : 'Precipitação (mm) / Vazão Bombeada Mina (m³/h)',
                         color: '#ccc'
                     }
                 }

@@ -241,7 +241,7 @@ export default function GraficoPiezometro({
             order: 2,
           },
           {
-            label: "Vazão Mina",
+            label: "Vazão Bombeada Mina",
             data: dados.map((i: any) => i.vazao_bombeamento),
             borderColor: "#00bb7e",
             borderWidth: 1,
@@ -268,7 +268,7 @@ export default function GraficoPiezometro({
       } else if (tipoPiezometro === "PR") {
         datasets = [
           {
-            label: "Vazão Mina",
+            label: "Vazão Bombeada Mina",
             data: dados.map((i: any) => i.vazao_bombeamento),
             borderColor: "#00bb7e",
             tension: 0.4,
@@ -309,7 +309,7 @@ export default function GraficoPiezometro({
             yAxisID: "y",
           },
           {
-            label: "Vazão Mina",
+            label: "Vazão Bombeada Mina",
             data: dados.map((i: any) => i.vazao_bombeamento),
             borderColor: "#00bb7e",
             borderWidth: 1,
@@ -467,7 +467,7 @@ export default function GraficoPiezometro({
               },
               title: {
                 display: true,
-                text: "Vazão Mina (m³/h) / Precipitação (mm)",
+                text: "Vazão Bombeada Mina (m³/h) / Precipitação (mm)",
                 color: "#ccc",
               },
             },
@@ -512,7 +512,7 @@ export default function GraficoPiezometro({
               },
               title: {
                 display: true,
-                text: "Precipitação (mm) / Vazão Mina (m³/h)",
+                text: "Precipitação (mm) / Vazão Bombeada Mina (m³/h)",
                 color: "#ccc",
               },
             },
@@ -557,7 +557,7 @@ export default function GraficoPiezometro({
               },
               title: {
                 display: true,
-                text: "Precipitação (mm) / Vazão Mina (m³/h)",
+                text: "Precipitação (mm) / Vazão Bombeada Mina (m³/h)",
                 color: "#ccc",
               },
             },
